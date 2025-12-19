@@ -4,6 +4,7 @@ const config = {
   singleQuote: true,
   trailingComma: 'es5',
   plugins: ['@ianvs/prettier-plugin-sort-imports'],
+  importOrderParserPlugins: ['typescript', 'jsx', 'decorators-legacy'],
   importOrder: [
     '.*styles.css$',
     '',
