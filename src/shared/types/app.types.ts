@@ -45,6 +45,22 @@ export interface ProblemUnit {
   answerStructureId: string; // 回答構造の同一性を識別するID
 }
 
+export interface ProblemUnitSettings {
+  question?: string; // オプショナル
+  scoring: number; // 配点
+  problemType: ProblemType;
+  answerType: AnswerType;
+}
+
+export interface ProblemUnitDataWithDraft extends ProblemUnitSettings {
+  answers: string[]; // 複数の回答を保持可能
+  answerDraft: string;
+}
+
+export interface ProblemUnitData extends ProblemUnitSettings {
+  answers: string[]; // 複数の回答を保持可能
+}
+
 /** 回答構造記録 (AnswerStructureRecord) */
 export interface AnswerStructureRecord {
   [answerStructureId: string]: number; // key: ID, value: 作成日時

@@ -17,6 +17,7 @@ import {
 } from '@mantine/core';
 import { useProblemListData } from '@/features/data/hooks/useProblemListData';
 import { useProblemUnitData } from '@/features/data/hooks/useProblemUnitData';
+import { DUMMY_UNITS } from '@/features/tackle/unit-dummy';
 import { ProblemUnit } from '@/shared/types/app.types';
 
 export const TacklePage: React.FC = () => {
@@ -37,7 +38,7 @@ export const TacklePage: React.FC = () => {
   if (!problemList) return <div>No problem list found</div>;
 
   const currentHierarchy = problemList.hierarchies.find((h) => h.id === activeTab);
-  const units = currentHierarchy ? getProblemUnits(currentHierarchy.unitVersionPaths) : [];
+  const units = DUMMY_UNITS; //currentHierarchy ? getProblemUnits(currentHierarchy.unitVersionPaths) : [];
 
   return (
     <Container size="sm" p="md" pb={100}>

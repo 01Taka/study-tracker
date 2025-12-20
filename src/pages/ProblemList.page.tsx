@@ -2,7 +2,9 @@ import { useState } from 'react';
 import { IconPlus } from '@tabler/icons-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Affix, Box, Button, Transition } from '@mantine/core';
+import { useHierarchyData } from '@/features/data/hooks/useHierarchyData';
 import { useProblemListData } from '@/features/data/hooks/useProblemListData';
+import { useProblemUnitData } from '@/features/data/hooks/useProblemUnitData';
 import { TopNav } from '@/features/navigation/TopNav';
 import { CreateProblemListBottomSheet } from '@/features/problemList/components/CreateProblemListBottomSheet';
 import { ProblemListModal } from '@/features/problemList/components/modal/ProblemListModal';
@@ -14,6 +16,12 @@ export function ProblemListPage() {
 
   const { problemLists, currentWorkbook, workbookName, onCreate, getProblemList } =
     useProblemListData(workbookId ?? '');
+
+  const { onCreateHierarchy, onDeleteHierarchy } = useHierarchyData();
+
+  const { getProblemUnits, addUnitsToHierarchy, removeUnitFromHierarchy, updateUnit } =
+    useProblemUnitData();
+
   const [openedCreateModal, setOpenedCreateModal] = useState(false);
   const [openedProblemListId, setOpenedProblemListId] = useState<string | null>(null);
   const openedProblemList = getProblemList(openedProblemListId ?? undefined);
@@ -39,6 +47,12 @@ export function ProblemListPage() {
             navigate(`/tackle/${currentWorkbook.id}/${openedProblemList.id}`);
           }
         }}
+        onCreateHierarchy={onCreateHierarchy}
+        onDeleteHierarchy={onDeleteHierarchy}
+        getProblemUnits={getProblemUnits}
+        addUnitsToHierarchy={addUnitsToHierarchy}
+        removeUnitFromHierarchy={removeUnitFromHierarchy}
+        updateUnit={updateUnit}
       />
 
       {!openedProblemList && (

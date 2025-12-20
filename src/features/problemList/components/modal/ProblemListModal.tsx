@@ -12,7 +12,13 @@ import {
   Text,
   Title,
 } from '@mantine/core';
-import { ProblemList, StartSessionFilterType, Workbook } from '@/shared/types/app.types';
+import {
+  ProblemList,
+  ProblemUnit,
+  ProblemUnitData,
+  StartSessionFilterType,
+  Workbook,
+} from '@/shared/types/app.types';
 import { AnalysisTab } from './AnalysisTab';
 import { EditTab } from './EditTab';
 import { StartSessionTab } from './StartSessionTab';
@@ -23,6 +29,22 @@ interface ProblemListModalProps {
   workbook: Workbook | null;
   problemList: ProblemList | null;
   onStartSession: (type: StartSessionFilterType) => void;
+
+  // EditTab用
+  // useHierarchyData 関連
+  onCreateHierarchy: (wbId: string, plId: string, data: { name: string }) => void;
+  onDeleteHierarchy: (wbId: string, plId: string, hId: string) => void;
+  // useProblemUnitData 関連
+  getProblemUnits: (paths: string[]) => ProblemUnit[];
+  addUnitsToHierarchy: (wbId: string, plId: string, hId: string, data: ProblemUnitData[]) => void;
+  removeUnitFromHierarchy: (wbId: string, plId: string, hId: string, path: string) => void;
+  updateUnit: (
+    wbId: string,
+    plId: string,
+    hId: string,
+    unitId: string,
+    newData: ProblemUnitData
+  ) => void;
 }
 
 export const ProblemListModal: React.FC<ProblemListModalProps> = ({
@@ -31,6 +53,13 @@ export const ProblemListModal: React.FC<ProblemListModalProps> = ({
   workbook,
   problemList,
   onStartSession,
+
+  onCreateHierarchy,
+  onDeleteHierarchy,
+  getProblemUnits,
+  addUnitsToHierarchy,
+  removeUnitFromHierarchy,
+  updateUnit,
 }) => {
   // データがない場合の表示（ガード句）
   const renderEmptyState = () => (
@@ -101,7 +130,16 @@ export const ProblemListModal: React.FC<ProblemListModalProps> = ({
               <AnalysisTab problemList={problemList} />
             </Tabs.Panel>
             <Tabs.Panel value="edit">
-              <EditTab problemList={problemList} />
+              <EditTab
+                workbookId={workbook.id}
+                problemList={problemList}
+                onCreateHierarchy={onCreateHierarchy}
+                onDeleteHierarchy={onDeleteHierarchy}
+                getProblemUnits={getProblemUnits}
+                addUnitsToHierarchy={addUnitsToHierarchy}
+                removeUnitFromHierarchy={removeUnitFromHierarchy}
+                updateUnit={updateUnit}
+              />
             </Tabs.Panel>
           </Box>
         </Tabs>
