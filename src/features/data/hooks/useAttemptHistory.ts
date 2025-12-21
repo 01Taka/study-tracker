@@ -22,13 +22,15 @@ export const useAttemptHistory = () => {
    * セッション開始
    */
   const startSession = useCallback(
-    (problemListVersionId: string) => {
+    (args: { problemListVersionId: string; workbookId: string; problemListId: string }) => {
       if (activeSession) return;
 
       const newSession: Partial<AttemptHistory> = {
         id: generateId(),
         startTime: Date.now(),
-        problemListVersionId,
+        problemListVersionId: args.problemListVersionId,
+        workbookId: args.workbookId,
+        problemListId: args.problemListId,
       };
 
       setActiveSession(newSession);
@@ -48,6 +50,8 @@ export const useAttemptHistory = () => {
         id: activeSession.id!,
         startTime: activeSession.startTime!,
         problemListVersionId: activeSession.problemListVersionId!,
+        workbookId: activeSession.workbookId!,
+        problemListId: activeSession.problemListId!,
         endTime: Date.now(),
         unitAttempts,
       };

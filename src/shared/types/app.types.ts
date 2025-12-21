@@ -78,17 +78,21 @@ export type SelfEvalType = 'CONFIDENT' | 'UNSURE' | 'NONE' | 'UNRATED'; // ○, 
 /** 回答履歴 (AttemptHistory) */
 export interface AttemptHistory {
   id: string;
+  workbookId: string;
+  problemListId: string;
   startTime: number;
   endTime: number;
   problemListVersionId: string;
   unitAttempts: UnitAttemptResult;
 }
 
+export type UnitAttemptResultData = {
+  answers: Record<string, string>; // keyがindex, valueが回答
+  selfEval: SelfEvalType;
+};
+
 export type UnitAttemptResult = {
-  [unitId: string]: {
-    answers: Record<string, string>; // keyがindex, valueが回答
-    selfEval: SelfEvalType;
-  };
+  [unitId: string]: UnitAttemptResultData;
 };
 
 export type StartSessionFilterType = 'all' | 'miss' | 'recommended';
@@ -97,4 +101,13 @@ export interface ProblemRange {
   start: number;
   end: number;
   problemNumbers: number[];
+  isError: boolean;
 }
+
+/** 判定結果のステータス */
+export type JudgeStatus = 'CORRECT' | 'WRONG';
+
+/** * 自己評価と正誤判定の組み合わせ型
+ * 'CONFIDENT_CORRECT' | 'CONFIDENT_WRONG' | 'UNSURE_CORRECT' | ... と展開される
+ */
+export type SelfEvalResultKey = `${SelfEvalType}_${JudgeStatus}`;

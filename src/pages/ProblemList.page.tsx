@@ -34,7 +34,11 @@ export function ProblemListPage() {
       if (isSessionActive) {
         cancelSession();
       }
-      startSession(openedProblemList.id);
+      startSession({
+        problemListVersionId: 'ver1.0',
+        workbookId: currentWorkbook.id,
+        problemListId: openedProblemList.id,
+      });
       navigate(`/tackle/${currentWorkbook.id}/${openedProblemList.id}`);
     }
   };
@@ -61,7 +65,6 @@ export function ProblemListPage() {
         reloadWorkbook={reloadWorkbook}
       />
 
-      {/* --- 以下変更なし --- */}
       {!openedProblemList && (
         <Affix position={{ bottom: 20, right: 20 }}>
           <Transition transition="slide-up" mounted={true}>

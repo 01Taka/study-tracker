@@ -33,7 +33,7 @@ export const TacklePage: React.FC = () => {
   const { problemList, activeTab, setActiveTab, form, units, isLoading, handleSubmit } =
     useTackleForm(workbookId, problemListId);
 
-  const { problemNumberMap } = useProblemNumbers(units);
+  const { problemNumberMap } = useProblemNumbers({ def: units });
 
   const scrollToUnit = useCallback((index: number) => {
     const element = cardRefs.current.get(index);
@@ -163,7 +163,7 @@ export const TacklePage: React.FC = () => {
               <Tabs.Panel key={h.id} value={h.id} pt="md">
                 <Stack gap="lg">
                   {units.map((unit, index) => {
-                    const problemNumber = problemNumberMap[unit.unitId];
+                    const problemNumber = problemNumberMap['def'][unit.unitId];
                     return (
                       <div
                         key={`${h.id}-${unit.unitId}`}

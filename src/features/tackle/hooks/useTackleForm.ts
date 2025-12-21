@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from '@mantine/form';
 import { useAttemptHistory } from '@/features/data/hooks/useAttemptHistory';
@@ -20,7 +20,7 @@ export const useTackleForm = (workbookId: string, problemListId: string) => {
   const navigate = useNavigate();
   const { getProblemList } = useProblemListData(workbookId);
   const { getProblemUnits } = useProblemUnitData();
-  const { endSession } = useAttemptHistory();
+  const { activeSession, endSession } = useAttemptHistory();
   const [activeTab, setActiveTab] = useState<string | null>(null);
 
   const problemList = getProblemList(problemListId);
@@ -72,10 +72,17 @@ export const useTackleForm = (workbookId: string, problemListId: string) => {
     }
   }, [problemList, activeTab]);
 
-  const handleSubmit = (values: typeof form.values) => {
-    endSession(values.answers);
-    navigate(`/${workbookId}/problemList`);
-  };
+  const handleSubmit = useCallback(
+    (values: typeof form.values) => {
+      console.log(activeSession);
+
+      if (activeSession?.id) {
+        endSession(values.answers);
+        navigate(`/result/${activeSession.id}`);
+      }
+    },
+    [activeSession, endSession]
+  );
 
   return {
     problemList,

@@ -1,39 +1,50 @@
 import { useMemo } from 'react';
 import { ProblemRange, ProblemUnit } from '../types/app.types';
 
-export const useProblemNumbers = (units: ProblemUnit[]) => {
-  const problemNumberMap: Record<string, ProblemRange> = useMemo(() => {
-    const record: Record<string, ProblemRange> = {};
-    let currentCount = 0;
+type ProblemNumberResult = Record<string, Record<string, ProblemRange>>;
 
-    units.forEach((unit) => {
-      // answersの要素数を問題数として扱う
-      const problemCount = unit.answers.length;
+export const useProblemNumbers = (unitsMap: Record<string, ProblemUnit[] | undefined>) => {
+  const problemNumberMap: ProblemNumberResult = useMemo(() => {
+    const result: ProblemNumberResult = {};
 
-      // 問題数が0件の場合のハンドリング（必要に応じて）
-      if (problemCount === 0) {
-        record[unit.unitId] = { start: 0, end: 0, problemNumbers: [] };
-        return;
-      }
+    // Object.entries(unitsMap ?? {}) とすることで、unitsMap自体がnull/undefinedでも空配列としてループ
+    Object.entries(unitsMap ?? {}).forEach(([key, units]) => {
+      const record: Record<string, ProblemRange> = {};
+      let currentCount = 0;
 
-      const start = currentCount + 1;
-      const end = currentCount + problemCount;
+      // units が undefined の場合は何もしない (空のrecordを返す)
+      units?.forEach((unit) => {
+        if (!unit) {
+          return;
+        }
 
-      // startからendまでの連番配列を作成
-      const problemNumbers = Array.from({ length: problemCount }, (_, i) => start + i);
+        // unit.answers が undefined の場合も考慮して空配列として扱う
+        const problemCount = unit.answers?.length ?? 0;
 
-      record[unit.unitId] = {
-        start,
-        end,
-        problemNumbers,
-      };
+        if (problemCount === 0) {
+          record[unit.unitId] = { start: 0, end: 0, problemNumbers: [], isError: true };
+          return;
+        }
 
-      // 次のユニットのためにカウントを更新
-      currentCount = end;
+        const start = currentCount + 1;
+        const end = currentCount + problemCount;
+        const problemNumbers = Array.from({ length: problemCount }, (_, i) => start + i);
+
+        record[unit.unitId] = {
+          start,
+          end,
+          problemNumbers,
+          isError: false,
+        };
+
+        currentCount = end;
+      });
+
+      result[key] = record;
     });
 
-    return record;
-  }, [units]);
+    return result;
+  }, [unitsMap]);
 
   return { problemNumberMap };
 };
