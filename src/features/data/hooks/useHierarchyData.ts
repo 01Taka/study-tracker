@@ -3,7 +3,7 @@ import { useWorkbookData } from '@/features/data/hooks/useWorkbookData';
 import { generateId } from '@/shared/functions/generate-id';
 import { UserDefinedHierarchy } from '@/shared/types/app.types';
 
-export const useHierarchyData = () => {
+export const useHierarchyData = (reloadWorkbook?: () => void) => {
   const { setWorkbooks } = useWorkbookData();
 
   /**
@@ -19,11 +19,7 @@ export const useHierarchyData = () => {
 
       setWorkbooks((prevWorkbooks) =>
         prevWorkbooks.map((wb) => {
-          console.log(wb);
-
           if (wb.id !== workbookId) return wb;
-          console.log(prevWorkbooks, newHierarchy);
-
           return {
             ...wb,
             problemLists: wb.problemLists.map((pl) => {
@@ -36,8 +32,10 @@ export const useHierarchyData = () => {
           };
         })
       );
+      // 更新後にリロードを実行
+      reloadWorkbook?.();
     },
-    [setWorkbooks]
+    [setWorkbooks, reloadWorkbook]
   );
 
   /**
@@ -60,8 +58,9 @@ export const useHierarchyData = () => {
           };
         })
       );
+      reloadWorkbook?.();
     },
-    [setWorkbooks]
+    [setWorkbooks, reloadWorkbook]
   );
 
   /**
@@ -95,8 +94,9 @@ export const useHierarchyData = () => {
           };
         })
       );
+      reloadWorkbook?.();
     },
-    [setWorkbooks]
+    [setWorkbooks, reloadWorkbook]
   );
 
   /**
@@ -133,8 +133,9 @@ export const useHierarchyData = () => {
           };
         })
       );
+      reloadWorkbook?.();
     },
-    [setWorkbooks]
+    [setWorkbooks, reloadWorkbook]
   );
 
   /**
@@ -163,8 +164,9 @@ export const useHierarchyData = () => {
           };
         })
       );
+      reloadWorkbook?.();
     },
-    [setWorkbooks]
+    [setWorkbooks, reloadWorkbook]
   );
 
   return {

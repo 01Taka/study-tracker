@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { IconChartBar, IconEdit, IconPlayerPlay, IconX } from '@tabler/icons-react';
 import {
   ActionIcon,
@@ -12,6 +12,8 @@ import {
   Text,
   Title,
 } from '@mantine/core';
+import { useHierarchyData } from '@/features/data/hooks/useHierarchyData';
+import { useProblemUnitData } from '@/features/data/hooks/useProblemUnitData';
 import {
   ProblemList,
   ProblemUnit,
@@ -28,23 +30,8 @@ interface ProblemListModalProps {
   onClose: () => void;
   workbook: Workbook | null;
   problemList: ProblemList | null;
+  reloadWorkbook: () => void;
   onStartSession: (type: StartSessionFilterType) => void;
-
-  // EditTab用
-  // useHierarchyData 関連
-  onCreateHierarchy: (wbId: string, plId: string, data: { name: string }) => void;
-  onDeleteHierarchy: (wbId: string, plId: string, hId: string) => void;
-  // useProblemUnitData 関連
-  getProblemUnits: (paths: string[]) => ProblemUnit[];
-  addUnitsToHierarchy: (wbId: string, plId: string, hId: string, data: ProblemUnitData[]) => void;
-  removeUnitFromHierarchy: (wbId: string, plId: string, hId: string, path: string) => void;
-  updateUnit: (
-    wbId: string,
-    plId: string,
-    hId: string,
-    unitId: string,
-    newData: ProblemUnitData
-  ) => void;
 }
 
 export const ProblemListModal: React.FC<ProblemListModalProps> = ({
@@ -52,15 +39,14 @@ export const ProblemListModal: React.FC<ProblemListModalProps> = ({
   onClose,
   workbook,
   problemList,
+  reloadWorkbook,
   onStartSession,
-
-  onCreateHierarchy,
-  onDeleteHierarchy,
-  getProblemUnits,
-  addUnitsToHierarchy,
-  removeUnitFromHierarchy,
-  updateUnit,
 }) => {
+  const { onCreateHierarchy, onDeleteHierarchy } = useHierarchyData(reloadWorkbook);
+
+  const { getProblemUnits, addUnitsToHierarchy, removeUnitFromHierarchy, updateUnit } =
+    useProblemUnitData(reloadWorkbook);
+
   // データがない場合の表示（ガード句）
   const renderEmptyState = () => (
     <Center style={{ flex: 1 }} p="xl">
@@ -132,7 +118,8 @@ export const ProblemListModal: React.FC<ProblemListModalProps> = ({
             <Tabs.Panel value="edit">
               <EditTab
                 workbookId={workbook.id}
-                problemList={problemList}
+                problemListId={problemList.id}
+                hierarchies={problemList.hierarchies}
                 onCreateHierarchy={onCreateHierarchy}
                 onDeleteHierarchy={onDeleteHierarchy}
                 getProblemUnits={getProblemUnits}

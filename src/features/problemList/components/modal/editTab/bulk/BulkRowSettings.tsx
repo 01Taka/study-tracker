@@ -1,6 +1,9 @@
 import { Group, NumberInput, Select } from '@mantine/core';
 import { AnswerType, ProblemUnitSettings } from '@/shared/types/app.types';
-import { ANSWER_TYPE_SELECTIONS, PROBLEM_TYPE_SELECTIONS } from '../../../constants/form-constants';
+import {
+  ANSWER_TYPE_SELECTIONS,
+  PROBLEM_TYPE_SELECTIONS,
+} from '../../../../constants/form-constants';
 
 interface BulkRowSettingsProps {
   settings: Pick<ProblemUnitSettings, 'answerType' | 'problemType' | 'scoring'>;

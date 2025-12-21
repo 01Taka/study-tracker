@@ -5,7 +5,7 @@ import { ProblemList } from '@/shared/types/app.types';
 
 interface ProblemListsDisplayProps {
   problemLists: ProblemList[];
-  onClick: (id: string) => void;
+  onClick: (index: number) => void;
 }
 
 export const ProblemListsDisplay: React.FC<ProblemListsDisplayProps> = ({
@@ -14,14 +14,14 @@ export const ProblemListsDisplay: React.FC<ProblemListsDisplayProps> = ({
 }) => {
   return (
     <Stack gap="xs">
-      {problemLists.map((workbook) => (
+      {problemLists.map((workbook, index) => (
         <Card
           key={workbook.id}
           withBorder
           padding="md"
           radius="md"
           component="button" // ボタン要素として扱う
-          onClick={() => onClick(workbook.id)}
+          onClick={() => onClick(index)}
           styles={(theme) => ({
             root: {
               cursor: 'pointer',

@@ -2,9 +2,7 @@ import { useState } from 'react';
 import { IconPlus } from '@tabler/icons-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Affix, Box, Button, Transition } from '@mantine/core';
-import { useHierarchyData } from '@/features/data/hooks/useHierarchyData';
 import { useProblemListData } from '@/features/data/hooks/useProblemListData';
-import { useProblemUnitData } from '@/features/data/hooks/useProblemUnitData';
 import { TopNav } from '@/features/navigation/TopNav';
 import { CreateProblemListBottomSheet } from '@/features/problemList/components/CreateProblemListBottomSheet';
 import { ProblemListModal } from '@/features/problemList/components/modal/ProblemListModal';
@@ -14,17 +12,19 @@ export function ProblemListPage() {
   const navigate = useNavigate();
   const { workbookId } = useParams();
 
-  const { problemLists, currentWorkbook, workbookName, onCreate, getProblemList } =
+  // reloadWorkbook を取得
+  const { problemLists, currentWorkbook, workbookName, onCreate, reloadWorkbook } =
     useProblemListData(workbookId ?? '');
 
-  const { onCreateHierarchy, onDeleteHierarchy } = useHierarchyData();
-
-  const { getProblemUnits, addUnitsToHierarchy, removeUnitFromHierarchy, updateUnit } =
-    useProblemUnitData();
-
   const [openedCreateModal, setOpenedCreateModal] = useState(false);
-  const [openedProblemListId, setOpenedProblemListId] = useState<string | null>(null);
-  const openedProblemList = getProblemList(openedProblemListId ?? undefined);
+
+  // 1. オブジェクトではなく「インデックス」を管理する
+  const [openedProblemListIndex, setOpenedProblemListIndex] = useState<number | null>(null);
+
+  // 2. レンダリングのたびに、最新の problemLists からデータを取得する
+  // これにより reloadWorkbook() 実行後、ここも自動的に最新データになる
+  const openedProblemList =
+    openedProblemListIndex !== null ? problemLists[openedProblemListIndex] : null;
 
   return (
     <>
@@ -33,28 +33,26 @@ export function ProblemListPage() {
       <Box p={'md'}>
         <ProblemListsDisplay
           problemLists={problemLists}
-          onClick={(id) => setOpenedProblemListId(id)}
+          // 3. クリック時にインデックスを保存するように変更
+          onClick={(index) => setOpenedProblemListIndex(index)}
         />
       </Box>
 
       <ProblemListModal
         workbook={currentWorkbook}
+        // openedProblemList は最新の参照なので、更新が反映される
         opened={!!openedProblemList}
-        onClose={() => setOpenedProblemListId(null)}
+        onClose={() => setOpenedProblemListIndex(null)}
         problemList={openedProblemList}
         onStartSession={() => {
           if (currentWorkbook && openedProblemList) {
             navigate(`/tackle/${currentWorkbook.id}/${openedProblemList.id}`);
           }
         }}
-        onCreateHierarchy={onCreateHierarchy}
-        onDeleteHierarchy={onDeleteHierarchy}
-        getProblemUnits={getProblemUnits}
-        addUnitsToHierarchy={addUnitsToHierarchy}
-        removeUnitFromHierarchy={removeUnitFromHierarchy}
-        updateUnit={updateUnit}
+        reloadWorkbook={reloadWorkbook}
       />
 
+      {/* --- 以下変更なし --- */}
       {!openedProblemList && (
         <Affix position={{ bottom: 20, right: 20 }}>
           <Transition transition="slide-up" mounted={true}>

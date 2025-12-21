@@ -14,14 +14,15 @@ import {
   TextInput,
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
-import { ProblemList, ProblemUnit, ProblemUnitData } from '@/shared/types/app.types';
+import { ProblemUnit, ProblemUnitData, UserDefinedHierarchy } from '@/shared/types/app.types';
 import { BulkAddModal } from './editTab/bulk/BulkAddModal';
 import { UnitDisplayCard } from './editTab/UnitDisplayCard';
 import { UnitEditModal } from './editTab/UnitEditModal';
 
 interface EditTabProps {
   workbookId: string;
-  problemList: ProblemList;
+  problemListId: string;
+  hierarchies: UserDefinedHierarchy[];
   onCreateHierarchy: (wbId: string, plId: string, data: { name: string }) => void;
   onDeleteHierarchy: (wbId: string, plId: string, hId: string) => void;
   onUpdateHierarchyName?: (wbId: string, plId: string, hId: string, name: string) => void;
@@ -39,7 +40,8 @@ interface EditTabProps {
 
 export const EditTab = ({
   workbookId,
-  problemList,
+  problemListId,
+  hierarchies,
   onCreateHierarchy,
   onDeleteHierarchy,
   onUpdateHierarchyName,
@@ -50,7 +52,7 @@ export const EditTab = ({
 }: EditTabProps) => {
   // State
   const [activeTab, setActiveTab] = useState<string | null>(
-    problemList.hierarchies.length > 0 ? problemList.hierarchies[0].id : null
+    hierarchies.length > 0 ? hierarchies[0].id : null
   );
 
   // Modals
@@ -64,8 +66,8 @@ export const EditTab = ({
 
   // Derived State
   const currentHierarchy = useMemo(
-    () => problemList.hierarchies.find((h) => h.id === activeTab),
-    [problemList.hierarchies, activeTab]
+    () => hierarchies.find((h) => h.id === activeTab),
+    [hierarchies, activeTab]
   );
 
   const currentUnits = useMemo(() => {
@@ -87,7 +89,7 @@ export const EditTab = ({
 
   // Actions
   const handleCreateHierarchy = () => {
-    onCreateHierarchy(workbookId, problemList.id, { name: newHierarchyName });
+    onCreateHierarchy(workbookId, problemListId, { name: newHierarchyName });
     setNewHierarchyName('');
     closeCreateH();
   };
@@ -95,7 +97,7 @@ export const EditTab = ({
   const handleDeleteUnit = (unit: ProblemUnit) => {
     if (!currentHierarchy) return;
     if (confirm('削除しますか？')) {
-      removeUnitFromHierarchy(workbookId, problemList.id, currentHierarchy.id, unit.unitId);
+      removeUnitFromHierarchy(workbookId, problemListId, currentHierarchy.id, unit.unitId);
     }
   };
 
@@ -107,7 +109,7 @@ export const EditTab = ({
           <ScrollArea type="hover" scrollbarSize={6} offsetScrollbars style={{ flex: 1 }}>
             <Tabs value={activeTab} onChange={setActiveTab} variant="pills">
               <Tabs.List style={{ flexWrap: 'nowrap', position: 'relative', alignItems: 'center' }}>
-                {problemList.hierarchies.map((h) => (
+                {hierarchies.map((h) => (
                   <Tabs.Tab key={h.id} value={h.id} pr="xs">
                     <Group gap="xs" wrap="nowrap">
                       <Text>{h.name}</Text>
@@ -115,6 +117,7 @@ export const EditTab = ({
                         size="sm"
                         variant="subtle"
                         color="gray"
+                        component="div"
                         onClick={(e) => {
                           e.stopPropagation();
                         }}
@@ -156,6 +159,7 @@ export const EditTab = ({
             <Grid pos={'relative'}>
               {currentUnits.map((unit, index) => (
                 <UnitDisplayCard
+                  key={unit.unitId}
                   questionNumber={index + 1}
                   unit={unit}
                   onEdit={() => {
@@ -210,7 +214,7 @@ export const EditTab = ({
         onSave={(d) =>
           editingUnit &&
           currentHierarchy &&
-          updateUnit(workbookId, problemList.id, currentHierarchy.id, editingUnit.unitId, d)
+          updateUnit(workbookId, problemListId, currentHierarchy.id, editingUnit.unitId, d)
         }
       />
 
@@ -220,7 +224,7 @@ export const EditTab = ({
         baseProblemIndex={totalAnswerCount}
         onAdd={(units) =>
           currentHierarchy &&
-          addUnitsToHierarchy(workbookId, problemList.id, currentHierarchy.id, units)
+          addUnitsToHierarchy(workbookId, problemListId, currentHierarchy.id, units)
         }
       />
     </Stack>

@@ -5,7 +5,7 @@ import { ProblemList } from '@/shared/types/app.types';
 
 export const useProblemListData = (workbookId: string) => {
   // updateWorkbooks (保存機能付き) を setWorkbooks として取得
-  const { workbooks, setWorkbooks } = useWorkbookData();
+  const { workbooks, setWorkbooks, reloadWorkbook } = useWorkbookData();
 
   /**
    * 原因対策: workbooks 自体を依存配列に入れ、
@@ -49,6 +49,7 @@ export const useProblemListData = (workbookId: string) => {
   return {
     currentWorkbook,
     problemLists,
+    reloadWorkbook,
     onCreate: onCreateProblemList,
     getProblemList,
     workbookName: currentWorkbook?.name || '',

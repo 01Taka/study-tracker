@@ -33,10 +33,16 @@ export const useWorkbookData = () => {
     }
   }, []);
 
+  const reloadWorkbook = useCallback(() => {
+    const data = getLatestWorkbooksFromStorage();
+    setWorkbooks(data);
+    return data;
+  }, [getLatestWorkbooksFromStorage]);
+
   // 初回読み込み
   useEffect(() => {
-    setWorkbooks(getLatestWorkbooksFromStorage());
-  }, [getLatestWorkbooksFromStorage]);
+    reloadWorkbook();
+  }, [reloadWorkbook]);
 
   /**
    * ワークブックデータの更新
@@ -83,6 +89,7 @@ export const useWorkbookData = () => {
 
   return {
     workbooks,
+    reloadWorkbook,
     setWorkbooks: updateWorkbooks,
     onCreate,
     getWorkbook,
