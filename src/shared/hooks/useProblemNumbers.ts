@@ -1,7 +1,5 @@
 import { useMemo } from 'react';
-import { ProblemRange, ProblemUnit } from '../types/app.types';
-
-type ProblemNumberResult = Record<string, Record<string, ProblemRange>>;
+import { ProblemNumberResult, ProblemRange, ProblemUnit } from '../types/app.types';
 
 export const useProblemNumbers = (unitsMap: Record<string, ProblemUnit[] | undefined>) => {
   const problemNumberMap: ProblemNumberResult = useMemo(() => {

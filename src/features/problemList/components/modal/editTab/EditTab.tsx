@@ -157,33 +157,35 @@ export const EditTab = ({
         {currentHierarchy ? (
           <ScrollArea h="100%" p="md" pos={'relative'}>
             <Grid pos={'relative'}>
-              {currentUnits.map((unit, index) => (
-                <UnitDisplayCard
-                  key={unit.unitId}
-                  questionNumber={index + 1}
-                  unit={unit}
-                  onEdit={() => {
-                    setEditingUnit(unit);
-                    openUnitEdit();
-                  }}
-                  onDelete={() => handleDeleteUnit(unit)}
-                />
-              ))}
-              <Grid.Col
-                span={12}
-                style={{ position: 'sticky', bottom: 0, zIndex: 2, flexShrink: 0 }}
-              >
-                <Button
-                  fullWidth
-                  variant="dashed"
-                  h={60}
-                  color="gray"
-                  onClick={openBulkAdd}
-                  leftSection={<IconPlus size={24} />}
+              <Stack w={'100%'} h={'100%'} gap={0}>
+                {currentUnits.map((unit, index) => (
+                  <UnitDisplayCard
+                    key={unit.unitId}
+                    questionNumber={index + 1}
+                    unit={unit}
+                    onEdit={() => {
+                      setEditingUnit(unit);
+                      openUnitEdit();
+                    }}
+                    onDelete={() => handleDeleteUnit(unit)}
+                  />
+                ))}
+                <Grid.Col
+                  span={12}
+                  style={{ position: 'sticky', bottom: 0, zIndex: 2, flexShrink: 0 }}
                 >
-                  新規カード作成 (一括追加)
-                </Button>
-              </Grid.Col>
+                  <Button
+                    fullWidth
+                    variant="dashed"
+                    h={60}
+                    color="gray"
+                    onClick={openBulkAdd}
+                    leftSection={<IconPlus size={24} />}
+                  >
+                    新規カード作成 (一括追加)
+                  </Button>
+                </Grid.Col>
+              </Stack>
             </Grid>
           </ScrollArea>
         ) : (

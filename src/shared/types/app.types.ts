@@ -124,3 +124,7 @@ export type JudgeStatus = 'CORRECT' | 'WRONG';
  * 'CONFIDENT_CORRECT' | 'CONFIDENT_WRONG' | 'UNSURE_CORRECT' | ... と展開される
  */
 export type SelfEvalResultKey = `${SelfEvalType}_${JudgeStatus}`;
+
+export type ProblemNumberResult = Record<string, Record<string, ProblemRange>>;
+
+export type UnitAttempt = UnitAttemptResultData & { attemptAt: number };

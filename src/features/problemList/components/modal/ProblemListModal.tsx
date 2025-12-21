@@ -15,10 +15,18 @@ import {
 import { useAttemptHistory } from '@/features/data/hooks/useAttemptHistory';
 import { useHierarchyData } from '@/features/data/hooks/useHierarchyData';
 import { useProblemUnitData } from '@/features/data/hooks/useProblemUnitData';
+import { getLatestAttemptMap } from '@/shared/functions/attempt-result';
+import { safeArrayToRecord } from '@/shared/functions/object-utils';
+import {
+  createUnitSelectionChecker,
+  getUnitSelectedStateMap,
+} from '@/shared/functions/unit-selector';
+import { useProblemNumbers } from '@/shared/hooks/useProblemNumbers';
+import { useUnitSelection } from '@/shared/hooks/useUnitSelection';
 import { ProblemList, StartSessionFilterType, Workbook } from '@/shared/types/app.types';
 import { AnalysisTab } from './analysisTab/AnalysisTab';
 import { EditTab } from './editTab/EditTab';
-import { StartSessionTab } from './StartSessionTab';
+import { StartSessionTab } from './startSessionTab/StartSessionTab';
 
 interface ProblemListModalProps {
   opened: boolean;
@@ -44,10 +52,45 @@ export const ProblemListModal: React.FC<ProblemListModalProps> = ({
 
   const { getHistoriesByWorkbookId } = useAttemptHistory();
 
+  const hierarchiesMap = useMemo(() => {
+    return problemList?.hierarchies ? safeArrayToRecord(problemList.hierarchies, 'id') : {};
+  }, [problemList?.hierarchies]);
+
+  const unitsMapByHierarchy = useMemo(
+    () =>
+      problemList
+        ? Object.fromEntries(
+            problemList.hierarchies.map((hierarchy) => [
+              hierarchy.id,
+              hierarchy.unitVersionPaths.map((path) => unitRecord[path]),
+            ])
+          )
+        : {},
+    [problemList, unitRecord]
+  );
+
+  const { problemNumberMap } = useProblemNumbers(unitsMapByHierarchy);
+
   const histories = useMemo(
     () => (workbook ? getHistoriesByWorkbookId(workbook.id) : []),
     [workbook, getHistoriesByWorkbookId]
   );
+
+  const latestAttemptMap = problemList ? getLatestAttemptMap(problemList, histories) : {};
+
+  const unitIds = useMemo(
+    () => Object.values(unitsMapByHierarchy).flatMap((data) => data.map((unit) => unit.unitId)),
+    [unitsMapByHierarchy]
+  );
+
+  const { getIsSelected, getSelectedCount } = useUnitSelection(unitIds, latestAttemptMap);
+
+  const listData = useMemo(() => {
+    return Object.entries(unitsMapByHierarchy).map(([hierarchyId, units]) => ({
+      hierarchy: hierarchiesMap[hierarchyId],
+      units,
+    }));
+  }, [unitsMapByHierarchy, hierarchiesMap, histories]);
 
   // データがない場合の表示（ガード句）
   const renderEmptyState = () => (
@@ -112,7 +155,13 @@ export const ProblemListModal: React.FC<ProblemListModalProps> = ({
 
           <Box style={{ flex: 1, overflowY: 'auto' }} p="md">
             <Tabs.Panel value="start">
-              <StartSessionTab onStartSession={onStartSession} />
+              <StartSessionTab
+                onStartSession={onStartSession}
+                listData={listData}
+                problemNumberMap={problemNumberMap}
+                getIsSelected={getIsSelected}
+                getSelectedCount={getSelectedCount}
+              />
             </Tabs.Panel>
             <Tabs.Panel value="analysis">
               <AnalysisTab histories={histories} unitIds={Object.keys(unitRecord)} />
