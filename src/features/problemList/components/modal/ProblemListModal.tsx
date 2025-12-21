@@ -12,17 +12,12 @@ import {
   Text,
   Title,
 } from '@mantine/core';
+import { useAttemptHistory } from '@/features/data/hooks/useAttemptHistory';
 import { useHierarchyData } from '@/features/data/hooks/useHierarchyData';
 import { useProblemUnitData } from '@/features/data/hooks/useProblemUnitData';
-import {
-  ProblemList,
-  ProblemUnit,
-  ProblemUnitData,
-  StartSessionFilterType,
-  Workbook,
-} from '@/shared/types/app.types';
-import { AnalysisTab } from './AnalysisTab';
-import { EditTab } from './EditTab';
+import { ProblemList, StartSessionFilterType, Workbook } from '@/shared/types/app.types';
+import { AnalysisTab } from './analysisTab/AnalysisTab';
+import { EditTab } from './editTab/EditTab';
 import { StartSessionTab } from './StartSessionTab';
 
 interface ProblemListModalProps {
@@ -44,8 +39,15 @@ export const ProblemListModal: React.FC<ProblemListModalProps> = ({
 }) => {
   const { onCreateHierarchy, onDeleteHierarchy } = useHierarchyData(reloadWorkbook);
 
-  const { getProblemUnits, addUnitsToHierarchy, removeUnitFromHierarchy, updateUnit } =
+  const { unitRecord, getProblemUnits, addUnitsToHierarchy, removeUnitFromHierarchy, updateUnit } =
     useProblemUnitData(reloadWorkbook);
+
+  const { getHistoriesByWorkbookId } = useAttemptHistory();
+
+  const histories = useMemo(
+    () => (workbook ? getHistoriesByWorkbookId(workbook.id) : []),
+    [workbook, getHistoriesByWorkbookId]
+  );
 
   // データがない場合の表示（ガード句）
   const renderEmptyState = () => (
@@ -113,7 +115,7 @@ export const ProblemListModal: React.FC<ProblemListModalProps> = ({
               <StartSessionTab onStartSession={onStartSession} />
             </Tabs.Panel>
             <Tabs.Panel value="analysis">
-              <AnalysisTab problemList={problemList} />
+              <AnalysisTab histories={histories} unitIds={Object.keys(unitRecord)} />
             </Tabs.Panel>
             <Tabs.Panel value="edit">
               <EditTab

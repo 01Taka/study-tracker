@@ -12,7 +12,6 @@ import {
   RingProgress,
   Stack,
   Text,
-  Title,
 } from '@mantine/core';
 import { ResultRow } from '@/features/result/components/ResultRow';
 import { useResultCalculation } from '@/features/result/hooks/useResultCalculation';

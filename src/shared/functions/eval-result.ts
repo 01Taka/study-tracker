@@ -1,4 +1,4 @@
-import { ProblemUnit, SelfEvalResultKey, UnitAttemptResultData } from '@/shared/types/app.types';
+import { ProblemUnit, SelfEvalResultKey, UnitAttemptUserAnswers } from '@/shared/types/app.types';
 
 /**
  * 回答の正誤と自己評価を組み合わせたキーを生成する
@@ -6,7 +6,7 @@ import { ProblemUnit, SelfEvalResultKey, UnitAttemptResultData } from '@/shared/
  */
 export const getEvalResultKey = (
   unit: ProblemUnit,
-  attempt: UnitAttemptResultData
+  attempt: UnitAttemptUserAnswers
 ): SelfEvalResultKey => {
   const { answers: userAnswersMap, selfEval } = attempt;
   const correctAnswers = unit.answers;

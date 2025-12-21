@@ -1,12 +1,8 @@
-// features/results/components/ResultRow.tsx
 import { useState } from 'react';
-import { Badge, Center, Grid, Group, Paper, Stack, Text } from '@mantine/core';
+import { Badge, Center, Grid, Paper, Stack, Text } from '@mantine/core';
 import { useMediaQuery } from '@mantine/hooks';
 import { ProblemUnit, UnitAttemptResultData } from '@/shared/types/app.types';
-import { theme } from '@/theme';
 import { EVAL_DISPLAY_CONFIG } from '../constants/eval-constants';
-import { getEvalResultKey } from '../functions/eval-result';
-import { calculateScore } from '../functions/scoring';
 import { SelfEvalBadge } from './SelfEvalBadge';
 
 export const ResultRow = ({
@@ -19,14 +15,37 @@ export const ResultRow = ({
   problemNumbers: number[];
 }) => {
   const [expanded, setExpanded] = useState(false);
-  const res = calculateScore(unit, att);
+  const isMobile = useMediaQuery('(max-width: 576px)');
 
-  // 未回答（attがundefined）の場合はデフォルトのキーを設定
-  const key = att ? getEvalResultKey(unit, att) : 'UNRATED_WRONG';
-  const displayConfig = EVAL_DISPLAY_CONFIG[key];
+  // データが不足している場合のフォールバック
+  const resultKey = att?.resultKey ?? 'UNRATED_WRONG';
+  const displayConfig = EVAL_DISPLAY_CONFIG[resultKey];
   const StatusIcon = displayConfig.icon;
 
-  const isMobile = useMediaQuery('(max-width: 576px)');
+  // 各回答行のレンダリングを共通化
+  const renderAnswerRows = (isCorrectDisplay: boolean) => {
+    // 冗長化した att.results を使用。データがなければ unit.answers から枠だけ作る
+    const rowCount = Math.max(unit.answers.length, att ? Object.keys(att.results).length : 0);
+
+    return Array.from({ length: rowCount }).map((_, i) => {
+      const resultItem = att?.results[String(i)];
+      const text = isCorrectDisplay
+        ? resultItem?.collectAnswer || unit.answers[i] // 正解表示
+        : resultItem?.answer || '(未入力)'; // ユーザー回答表示
+
+      return (
+        <Text
+          key={i}
+          size="xs"
+          fw={!isCorrectDisplay && resultItem?.answer ? 600 : 400}
+          c={isCorrectDisplay ? 'dimmed' : resultItem?.answer ? 'inherit' : 'gray.4'}
+          lineClamp={expanded ? undefined : 1}
+        >
+          {text}
+        </Text>
+      );
+    });
+  };
 
   return (
     <Paper
@@ -37,56 +56,40 @@ export const ResultRow = ({
       onClick={() => setExpanded(!expanded)}
       style={{
         cursor: 'pointer',
-        transition: 'background-color 0.2s',
-        borderColor: displayConfig.colors.border, // 枠線にアクセント色を適用
+        transition: 'all 0.2s',
+        borderColor: displayConfig.colors.border,
       }}
     >
-      <Grid columns={12} align="center">
-        {/* 問題番号 */}
+      <Grid columns={12} align="center" gutter="xs">
+        {/* 1. 問題番号 */}
         <Grid.Col span={1.5}>
-          {problemNumbers.map((number) => (
-            <Text key={number} size="xs" fw={700} c="dimmed">
-              Q {number}
-            </Text>
-          ))}
-        </Grid.Col>
-
-        {/* ユーザー回答 */}
-        <Grid.Col span={2.5}>
-          <Stack gap={2}>
-            {unit.answers.map((_, i) => (
-              <Text
-                key={i}
-                size="xs"
-                fw={600}
-                lineClamp={expanded ? undefined : 1}
-                c={att?.answers[String(i)] ? 'inherit' : 'gray.4'}
-              >
-                {att?.answers[String(i)] || '(未入力)'}
+          <Stack gap={0}>
+            {problemNumbers.map((num) => (
+              <Text key={num} size="xs" fw={700} c="dimmed">
+                Q {num}
               </Text>
             ))}
           </Stack>
         </Grid.Col>
 
-        {/* 正解 */}
+        {/* 2. ユーザー回答 (attから直接出す) */}
         <Grid.Col span={2.5}>
-          <Stack gap={2}>
-            {unit.answers.map((ans, i) => (
-              <Text key={i} size="xs" c="dimmed" lineClamp={expanded ? undefined : 1}>
-                {ans}
-              </Text>
-            ))}
-          </Stack>
+          <Stack gap={2}>{renderAnswerRows(false)}</Stack>
         </Grid.Col>
 
-        {/* 自己評価 */}
+        {/* 3. 正解 (冗長化したデータから出す) */}
+        <Grid.Col span={2.5}>
+          <Stack gap={2}>{renderAnswerRows(true)}</Stack>
+        </Grid.Col>
+
+        {/* 4. 自己評価 */}
         <Grid.Col span={1.5}>
           <Center>
             <SelfEvalBadge type={att?.selfEval ?? 'UNRATED'} size={18} />
           </Center>
         </Grid.Col>
 
-        {/* ステータスバッジ（アイコン付き） */}
+        {/* 5. ステータス */}
         <Grid.Col span={2} ta="center">
           {isMobile ? (
             <Badge
@@ -115,10 +118,11 @@ export const ResultRow = ({
           )}
         </Grid.Col>
 
-        {/* スコア */}
+        {/* 6. スコア (attにスコアを持たせていれば計算不要) */}
         <Grid.Col span={2} ta="right">
           <Text size="xs" fw={700} c={displayConfig.colors.text}>
-            {Math.round(res.earned * 10) / 10} / {unit.scoring}
+            {/* 判定結果に基づき、正解なら満点、不正解なら0を表示する例（部分点ロジックがあれば調整） */}
+            {resultKey.endsWith('_CORRECT') ? unit.scoring : 0} / {unit.scoring}
           </Text>
         </Grid.Col>
       </Grid>

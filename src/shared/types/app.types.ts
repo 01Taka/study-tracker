@@ -86,13 +86,26 @@ export interface AttemptHistory {
   unitAttempts: UnitAttemptResult;
 }
 
+export type UnitAttemptResult = {
+  [unitId: string]: UnitAttemptResultData;
+};
+
 export type UnitAttemptResultData = {
-  answers: Record<string, string>; // keyがindex, valueが回答
+  results: Record<
+    string,
+    {
+      answer: string;
+      collectAnswer: string;
+      judge: JudgeStatus;
+    }
+  >;
+  resultKey: SelfEvalResultKey;
   selfEval: SelfEvalType;
 };
 
-export type UnitAttemptResult = {
-  [unitId: string]: UnitAttemptResultData;
+export type UnitAttemptUserAnswers = {
+  answers: Record<string, string>; // keyがindex, valueが回答
+  selfEval: SelfEvalType;
 };
 
 export type StartSessionFilterType = 'all' | 'miss' | 'recommended';

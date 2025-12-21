@@ -15,9 +15,9 @@ import {
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { ProblemUnit, ProblemUnitData, UserDefinedHierarchy } from '@/shared/types/app.types';
-import { BulkAddModal } from './editTab/bulk/BulkAddModal';
-import { UnitDisplayCard } from './editTab/UnitDisplayCard';
-import { UnitEditModal } from './editTab/UnitEditModal';
+import { BulkAddModal } from './bulk/BulkAddModal';
+import { UnitDisplayCard } from './UnitDisplayCard';
+import { UnitEditModal } from './UnitEditModal';
 
 interface EditTabProps {
   workbookId: string;

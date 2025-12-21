@@ -1,11 +1,11 @@
 // features/results/utils/scoring.ts
-import { ProblemUnit, SelfEvalType } from '@/shared/types/app.types';
+import { ProblemUnit, UnitAttemptResultData } from '@/shared/types/app.types';
 
-export const calculateScore = (unit: ProblemUnit, attempt: any) => {
+export const calculateScore = (unit: ProblemUnit, attempt: UnitAttemptResultData | undefined) => {
   if (!attempt) return { earned: 0, isPerfect: false };
   const correctAnswers = unit.answers;
   const userAnswers = Array.from({ length: correctAnswers.length }).map(
-    (_, i) => attempt.answers[String(i)] || ''
+    (_, i) => attempt.results[String(i)]?.answer || ''
   );
   const normalize = (s: string) => s.trim().toLowerCase();
 

@@ -4,22 +4,19 @@ import { useForm } from '@mantine/form';
 import { useAttemptHistory } from '@/features/data/hooks/useAttemptHistory';
 import { useProblemListData } from '@/features/data/hooks/useProblemListData';
 import { useProblemUnitData } from '@/features/data/hooks/useProblemUnitData';
-import { SelfEvalType } from '@/shared/types/app.types';
+import { UnitAttemptUserAnswers } from '@/shared/types/app.types';
 
 // 修正された型定義
 interface AnswerValues {
   answers: {
-    [unitPath: string]: {
-      answers: Record<string, string>; // keyがindex, valueが回答
-      selfEval: SelfEvalType;
-    };
+    [unitPath: string]: UnitAttemptUserAnswers;
   };
 }
 
 export const useTackleForm = (workbookId: string, problemListId: string) => {
   const navigate = useNavigate();
   const { getProblemList } = useProblemListData(workbookId);
-  const { getProblemUnits } = useProblemUnitData();
+  const { getProblemUnits, unitRecord } = useProblemUnitData();
   const { activeSession, endSession } = useAttemptHistory();
   const [activeTab, setActiveTab] = useState<string | null>(null);
 
@@ -77,7 +74,7 @@ export const useTackleForm = (workbookId: string, problemListId: string) => {
       console.log(activeSession);
 
       if (activeSession?.id) {
-        endSession(values.answers);
+        endSession(values.answers, Object.values(unitRecord));
         navigate(`/result/${activeSession.id}`);
       }
     },

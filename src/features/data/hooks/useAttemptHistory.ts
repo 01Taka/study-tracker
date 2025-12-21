@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
+import { createUnitAttemptResult } from '@/shared/functions/attempt-result';
 import { generateId } from '@/shared/functions/generate-id';
-import { AttemptHistory, UnitAttemptResult } from '@/shared/types/app.types';
+import { AttemptHistory, ProblemUnit, UnitAttemptUserAnswers } from '@/shared/types/app.types';
 
 const STORAGE_KEY = 'attempt_history_list';
 const ACTIVE_SESSION_KEY = 'active_attempt_session';
@@ -43,8 +44,10 @@ export const useAttemptHistory = () => {
    * セッション終了 & 履歴保存
    */
   const endSession = useCallback(
-    (unitAttempts: UnitAttemptResult) => {
+    (userAnswers: Record<string, UnitAttemptUserAnswers>, units: ProblemUnit[]) => {
       if (!activeSession) return;
+
+      const unitAttempts = createUnitAttemptResult(userAnswers, units);
 
       const completeHistory: AttemptHistory = {
         id: activeSession.id!,
@@ -87,6 +90,20 @@ export const useAttemptHistory = () => {
     setHistories([]);
   }, []);
 
+  /**
+   * 特定のワークブックの履歴を、開始時間の降順（新しい順）で取得する
+   */
+  const getHistoriesByWorkbookId = useCallback(
+    (workbookId: string, order: 'asc' | 'desc' = 'desc') => {
+      return histories
+        .filter((h) => h.workbookId === workbookId)
+        .sort((a, b) => {
+          return order === 'desc' ? b.startTime - a.startTime : a.startTime - b.startTime;
+        });
+    },
+    [histories]
+  );
+
   return {
     histories,
     activeSession,
@@ -94,6 +111,7 @@ export const useAttemptHistory = () => {
     endSession,
     cancelSession,
     clearAllHistories,
+    getHistoriesByWorkbookId,
     isSessionActive: !!activeSession,
   };
 };
