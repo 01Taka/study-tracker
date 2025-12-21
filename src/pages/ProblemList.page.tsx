@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { IconPlus } from '@tabler/icons-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Affix, Box, Button, Transition } from '@mantine/core';
+import { useAttemptHistory } from '@/features/data/hooks/useAttemptHistory';
 import { useProblemListData } from '@/features/data/hooks/useProblemListData';
 import { TopNav } from '@/features/navigation/TopNav';
 import { CreateProblemListBottomSheet } from '@/features/problemList/components/CreateProblemListBottomSheet';
@@ -16,6 +17,8 @@ export function ProblemListPage() {
   const { problemLists, currentWorkbook, workbookName, onCreate, reloadWorkbook } =
     useProblemListData(workbookId ?? '');
 
+  const { isSessionActive, startSession, cancelSession } = useAttemptHistory();
+
   const [openedCreateModal, setOpenedCreateModal] = useState(false);
 
   // 1. オブジェクトではなく「インデックス」を管理する
@@ -25,6 +28,16 @@ export function ProblemListPage() {
   // これにより reloadWorkbook() 実行後、ここも自動的に最新データになる
   const openedProblemList =
     openedProblemListIndex !== null ? problemLists[openedProblemListIndex] : null;
+
+  const handleStartSession = () => {
+    if (currentWorkbook && openedProblemList) {
+      if (isSessionActive) {
+        cancelSession();
+      }
+      startSession(openedProblemList.id);
+      navigate(`/tackle/${currentWorkbook.id}/${openedProblemList.id}`);
+    }
+  };
 
   return (
     <>
@@ -44,11 +57,7 @@ export function ProblemListPage() {
         opened={!!openedProblemList}
         onClose={() => setOpenedProblemListIndex(null)}
         problemList={openedProblemList}
-        onStartSession={() => {
-          if (currentWorkbook && openedProblemList) {
-            navigate(`/tackle/${currentWorkbook.id}/${openedProblemList.id}`);
-          }
-        }}
+        onStartSession={handleStartSession}
         reloadWorkbook={reloadWorkbook}
       />
 

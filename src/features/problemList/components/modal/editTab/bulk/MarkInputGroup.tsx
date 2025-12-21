@@ -1,5 +1,5 @@
-import React from 'react';
 import { Box, SegmentedControl } from '@mantine/core';
+import { MARK_SELECTIONS } from '@/shared/constants/mark-selections';
 
 interface MarkInputGroupProps {
   value: string;
@@ -8,8 +8,6 @@ interface MarkInputGroupProps {
 }
 
 export const MarkInputGroup = ({ value, onChange, disabled }: MarkInputGroupProps) => {
-  const options = ['-', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
-
   return (
     <Box>
       <SegmentedControl
@@ -18,7 +16,7 @@ export const MarkInputGroup = ({ value, onChange, disabled }: MarkInputGroupProp
         value={value}
         color="blue"
         onChange={onChange}
-        data={options}
+        data={MARK_SELECTIONS}
         // ラベルのパディング調整と、文字が潰れないための最小幅を確保
         styles={{
           label: {

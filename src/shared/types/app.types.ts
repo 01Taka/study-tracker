@@ -73,21 +73,28 @@ export interface UnitVersionRecord {
   [unitVersionPath: string]: ProblemUnit;
 }
 
+export type SelfEvalType = 'CONFIDENT' | 'UNSURE' | 'NONE' | 'UNRATED'; // ○, △, ✕
+
 /** 回答履歴 (AttemptHistory) */
 export interface AttemptHistory {
+  id: string;
   startTime: number;
   endTime: number;
   problemListVersionId: string;
-  unitAttempts: UnitAttemptResult[];
+  unitAttempts: UnitAttemptResult;
 }
 
-export interface UnitAttemptResult {
-  unitVersionPath: string;
-  inputs: {
-    userAnswer: string;
-    selfEvaluation: 'CONFIDENT' | 'UNSURE' | 'NONE' | ''; // ○, △, ✕
-    isTarget: boolean; // 今回のセッションの対象か
-  }[];
-}
+export type UnitAttemptResult = {
+  [unitId: string]: {
+    answers: Record<string, string>; // keyがindex, valueが回答
+    selfEval: SelfEvalType;
+  };
+};
 
 export type StartSessionFilterType = 'all' | 'miss' | 'recommended';
+
+export interface ProblemRange {
+  start: number;
+  end: number;
+  problemNumbers: number[];
+}

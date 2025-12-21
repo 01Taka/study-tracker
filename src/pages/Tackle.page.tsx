@@ -1,180 +1,214 @@
-import React, { useEffect, useState } from 'react';
-import { IconCheck, IconQuestionMark, IconX } from '@tabler/icons-react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { IconChevronUp, IconSettings } from '@tabler/icons-react'; // アイコンライブラリ
 import { useParams } from 'react-router-dom';
 import {
-  Box,
+  ActionIcon,
   Button,
-  Card,
+  Center,
+  Collapse,
   Container,
-  Divider,
   Group,
+  Loader,
   Paper,
-  SegmentedControl,
+  ScrollArea,
   Stack,
+  Switch,
   Tabs,
   Text,
-  TextInput,
 } from '@mantine/core';
-import { useProblemListData } from '@/features/data/hooks/useProblemListData';
-import { useProblemUnitData } from '@/features/data/hooks/useProblemUnitData';
-import { DUMMY_UNITS } from '@/features/tackle/unit-dummy';
-import { ProblemUnit } from '@/shared/types/app.types';
+import { ProblemUnitCard } from '@/features/tackle/components/ProblemUnitCard';
+import { EVAL_BASE_CONFIG } from '@/features/tackle/constants/evaluations';
+import { useTackleForm } from '@/features/tackle/hooks/useTackleForm';
+import { useProblemNumbers } from '@/shared/hooks/useProblemNumbers';
 
 export const TacklePage: React.FC = () => {
-  const { workbookId, problemListId } = useParams();
-  const { getProblemList } = useProblemListData(workbookId ?? '');
-  const { getProblemUnits } = useProblemUnitData();
+  const { workbookId = '', problemListId = '' } = useParams();
+  const cardRefs = useRef<Map<number, HTMLDivElement>>(new Map());
 
-  const problemList = getProblemList(problemListId);
-  const [activeTab, setActiveTab] = useState<string | null>(null);
+  // ステート管理
+  const [autoScrollEnabled, setAutoScrollEnabled] = useState(true);
+  const [lastInputIndex, setLastInputIndex] = useState(0);
+  const [settingsOpened, setSettingsOpened] = useState(true);
 
-  // 初回ロード時に最初の階層を選択
-  useEffect(() => {
-    if (problemList?.hierarchies.length && !activeTab) {
-      setActiveTab(problemList.hierarchies[0].id);
+  const { problemList, activeTab, setActiveTab, form, units, isLoading, handleSubmit } =
+    useTackleForm(workbookId, problemListId);
+
+  const { problemNumberMap } = useProblemNumbers(units);
+
+  const scrollToUnit = useCallback((index: number) => {
+    const element = cardRefs.current.get(index);
+    if (element && element.offsetParent !== null) {
+      element.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+      });
     }
-  }, [problemList, activeTab]);
+  }, []);
 
-  if (!problemList) return <div>No problem list found</div>;
+  useEffect(() => {
+    if (!autoScrollEnabled) return;
 
-  const currentHierarchy = problemList.hierarchies.find((h) => h.id === activeTab);
-  const units = DUMMY_UNITS; //currentHierarchy ? getProblemUnits(currentHierarchy.unitVersionPaths) : [];
+    const answers = form.values.answers;
+    const lastInputAnswer = answers[units[lastInputIndex]?.unitId ?? ''];
+    const inputCompleted =
+      Object.values(lastInputAnswer?.answers || {}).every((v) => v !== '') &&
+      lastInputAnswer?.selfEval !== 'UNRATED';
+
+    if (inputCompleted) {
+      scrollToUnit(lastInputIndex + 1);
+    }
+  }, [form.values.answers, autoScrollEnabled, units, lastInputIndex, scrollToUnit]);
+
+  if (isLoading || !problemList) {
+    return (
+      <Center h={200}>
+        <Loader size="sm" />
+      </Center>
+    );
+  }
 
   return (
     <Container size="sm" p="md" pb={100}>
-      <Stack gap="md">
-        <Tabs value={activeTab} onChange={setActiveTab} variant="pills" radius="xl">
-          <Tabs.List style={{ overflowX: 'auto', flexWrap: 'nowrap', paddingBottom: 8 }}>
-            {problemList.hierarchies.map((h) => (
-              <Tabs.Tab key={h.id} value={h.id}>
-                {h.name}
-              </Tabs.Tab>
-            ))}
-          </Tabs.List>
-
-          {problemList.hierarchies.map((h) => (
-            <Tabs.Panel key={h.id} value={h.id} pt="md">
-              <Stack gap="lg">
-                {units.map((unit, index) => (
-                  <ProblemUnitCard key={unit.unitId} unit={unit} index={index + 1} />
-                ))}
-              </Stack>
-            </Tabs.Panel>
-          ))}
-        </Tabs>
-      </Stack>
-
-      {/* フッター固定の完了ボタン */}
       <Paper
         withBorder
-        p="md"
-        style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 10 }}
+        p="xs"
+        mb="md"
+        style={{
+          position: 'sticky',
+          top: 10,
+          zIndex: 100,
+          backgroundColor: 'rgba(255, 255, 255, 0.9)',
+          backdropFilter: 'blur(4px)',
+        }}
       >
-        <Container size="sm">
-          <Button fullWidth size="lg" radius="xl" color="blue">
-            回答を終了して採点する
-          </Button>
-        </Container>
+        {/* 上段：タブと設定トグル */}
+        <Group justify="space-between" wrap="nowrap" align="flex-start">
+          <Tabs
+            value={activeTab}
+            onChange={setActiveTab}
+            variant="pills"
+            radius="xl"
+            keepMounted={false}
+            style={{ flexGrow: 1 }}
+          >
+            <Tabs.List>
+              {problemList.hierarchies.map((h) => (
+                <Tabs.Tab key={h.id} value={h.id}>
+                  {h.name}
+                </Tabs.Tab>
+              ))}
+            </Tabs.List>
+          </Tabs>
+
+          <ActionIcon
+            variant="subtle"
+            color="gray"
+            onClick={() => setSettingsOpened((o) => !o)}
+            title="設定を表示/非表示"
+          >
+            {settingsOpened ? <IconChevronUp size={20} /> : <IconSettings size={20} />}
+          </ActionIcon>
+        </Group>
+
+        {/* 下段：詳細設定（折りたたみ） */}
+        <Collapse in={settingsOpened}>
+          <Stack gap="xs" mt="sm">
+            <Group justify="space-between">
+              <Text size="xs" fw={700} c="dimmed">
+                問題ジャンプ:
+              </Text>
+              <Switch
+                label="オートスクロール"
+                size="xs"
+                checked={autoScrollEnabled}
+                onChange={(event) => setAutoScrollEnabled(event.currentTarget.checked)}
+              />
+            </Group>
+
+            <ScrollArea scrollbars="x" offsetScrollbars>
+              <Group gap={8} wrap="nowrap" pb="xs">
+                {units.map((unit, index) => (
+                  <ActionIcon
+                    key={unit.unitId}
+                    variant="light"
+                    color={
+                      EVAL_BASE_CONFIG[form.values.answers[unit.unitId]?.selfEval ?? 'UNRATED']
+                        .color
+                    }
+                    radius="xl"
+                    size="lg"
+                    style={{ flexShrink: 0 }}
+                    onClick={() => scrollToUnit(index)}
+                  >
+                    {index + 1}
+                  </ActionIcon>
+                ))}
+              </Group>
+            </ScrollArea>
+          </Stack>
+        </Collapse>
       </Paper>
+
+      <form onSubmit={form.onSubmit(handleSubmit)}>
+        <Stack gap="md">
+          {/* メインコンテンツ */}
+          <Tabs
+            value={activeTab}
+            onChange={setActiveTab}
+            variant="pills"
+            radius="xl"
+            keepMounted={false}
+          >
+            {problemList.hierarchies.map((h) => (
+              <Tabs.Panel key={h.id} value={h.id} pt="md">
+                <Stack gap="lg">
+                  {units.map((unit, index) => {
+                    const problemNumber = problemNumberMap[unit.unitId];
+                    return (
+                      <div
+                        key={`${h.id}-${unit.unitId}`}
+                        ref={(el) => {
+                          if (el && activeTab === h.id) {
+                            cardRefs.current.set(index, el);
+                          } else {
+                            cardRefs.current.delete(index);
+                          }
+                        }}
+                        style={{ scrollMarginTop: settingsOpened ? '200px' : '100px' }} // ヘッダーの高さに合わせて調整
+                      >
+                        <ProblemUnitCard
+                          unit={unit}
+                          problemNumberStart={problemNumber.start}
+                          problemNumberEnd={problemNumber.end}
+                          answers={form.values.answers[unit.unitId]?.answers ?? {}}
+                          selfEval={form.values.answers[unit.unitId]?.selfEval ?? 'UNRATED'}
+                          onAnswerChange={(aIndex, val) => {
+                            form.setFieldValue(`answers.${unit.unitId}.answers.${aIndex}`, val);
+                            setLastInputIndex(index);
+                          }}
+                          onEvalChange={(val) => {
+                            form.setFieldValue(`answers.${unit.unitId}.selfEval`, val);
+                            setLastInputIndex(index);
+                          }}
+                        />
+                      </div>
+                    );
+                  })}
+                </Stack>
+              </Tabs.Panel>
+            ))}
+          </Tabs>
+
+          <Button
+            type="submit"
+            fullWidth
+            size="lg"
+            style={{ position: 'sticky', bottom: 5, zIndex: 2 }}
+          >
+            回答完了
+          </Button>
+        </Stack>
+      </form>
     </Container>
   );
 };
-
-/**
- * 各問題ユニットの入力カード
- */
-const ProblemUnitCard = ({ unit, index }: { unit: ProblemUnit; index: number }) => {
-  const [userAnswer, setUserAnswer] = useState('');
-  const [selfEval, setSelfEval] = useState<'CONFIDENT' | 'UNSURE' | 'NONE' | ''>('');
-
-  return (
-    <Card withBorder shadow="sm" radius="md" padding="md">
-      <Stack gap="sm">
-        <Group justify="space-between">
-          <Text fw={700} size="sm" c="dimmed">
-            問題 {index}
-          </Text>
-          <Text size="xs" c="dimmed">
-            配点: {unit.scoring}点
-          </Text>
-        </Group>
-
-        {unit.question && <Text fw={500}>{unit.question}</Text>}
-
-        <Divider variant="dashed" />
-
-        {/* 入力インターフェース */}
-        <Box>
-          <Text size="xs" fw={700} mb={4} c="dimmed">
-            解答入力
-          </Text>
-          {unit.answerType === 'MARK' ? (
-            <SegmentedControl
-              fullWidth
-              value={userAnswer}
-              onChange={setUserAnswer}
-              data={['-', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9']}
-              styles={{ label: { padding: '8px 0' } }}
-            />
-          ) : (
-            <TextInput
-              placeholder="答えを入力"
-              value={userAnswer}
-              onChange={(e) => setUserAnswer(e.currentTarget.value)}
-            />
-          )}
-        </Box>
-
-        {/* 自己評価インターフェース */}
-        <Box>
-          <Text size="xs" fw={700} mb={8} c="dimmed">
-            自己評価
-          </Text>
-          <Group grow gap="xs">
-            <EvalButton
-              active={selfEval === 'CONFIDENT'}
-              onClick={() => setSelfEval('CONFIDENT')}
-              color="green"
-              icon={<IconCheck size={20} />}
-              label="自信あり"
-            />
-            <EvalButton
-              active={selfEval === 'UNSURE'}
-              onClick={() => setSelfEval('UNSURE')}
-              color="orange"
-              icon={<IconQuestionMark size={20} />}
-              label="びみょう"
-            />
-            <EvalButton
-              active={selfEval === 'NONE'}
-              onClick={() => setSelfEval('NONE')}
-              color="red"
-              icon={<IconX size={20} />}
-              label="自信なし"
-            />
-          </Group>
-        </Box>
-      </Stack>
-    </Card>
-  );
-};
-
-/**
- * 自己評価ボタンのヘルパーコンポーネント
- */
-const EvalButton = ({ active, onClick, color, icon, label }: any) => (
-  <Button
-    variant={active ? 'filled' : 'light'}
-    color={color}
-    onClick={onClick}
-    px={0}
-    styles={{ section: { margin: 0 } }}
-  >
-    <Stack gap={0} align="center">
-      {icon}
-      <Text size="10px" style={{ marginTop: -2 }}>
-        {label}
-      </Text>
-    </Stack>
-  </Button>
-);
