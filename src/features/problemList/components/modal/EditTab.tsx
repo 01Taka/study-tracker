@@ -1,12 +1,9 @@
-import React, { useMemo, useState } from 'react';
-import { IconEdit, IconPlus, IconSettings, IconTrash } from '@tabler/icons-react';
+import { useMemo, useState } from 'react';
+import { IconPlus, IconSettings } from '@tabler/icons-react';
 import {
   ActionIcon,
-  Badge,
   Box,
   Button,
-  Card,
-  Divider,
   Grid,
   Group,
   Modal,
@@ -18,7 +15,8 @@ import {
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { ProblemList, ProblemUnit, ProblemUnitData } from '@/shared/types/app.types';
-import { BulkAddModal } from './editTab/BulkAddModal';
+import { BulkAddModal } from './editTab/bulk/BulkAddModal';
+import { UnitDisplayCard } from './editTab/UnitDisplayCard';
 import { UnitEditModal } from './editTab/UnitEditModal';
 
 interface EditTabProps {
@@ -102,13 +100,13 @@ export const EditTab = ({
   };
 
   return (
-    <Stack h="100%" gap={0}>
+    <Stack style={{ position: 'fixed', top: 130, bottom: 0, right: 0, left: 0 }} gap={0}>
       {/* 1. Hierarchy Tabs */}
       <Box p="xs" bg="gray.0" style={{ borderBottom: '1px solid #e0e0e0' }}>
         <Group align="center" wrap="nowrap">
           <ScrollArea type="hover" scrollbarSize={6} offsetScrollbars style={{ flex: 1 }}>
             <Tabs value={activeTab} onChange={setActiveTab} variant="pills">
-              <Tabs.List style={{ flexWrap: 'nowrap' }}>
+              <Tabs.List style={{ flexWrap: 'nowrap', position: 'relative', alignItems: 'center' }}>
                 {problemList.hierarchies.map((h) => (
                   <Tabs.Tab key={h.id} value={h.id} pr="xs">
                     <Group gap="xs" wrap="nowrap">
@@ -118,7 +116,7 @@ export const EditTab = ({
                         variant="subtle"
                         color="gray"
                         onClick={(e) => {
-                          e.stopPropagation(); /* 編集処理 */
+                          e.stopPropagation();
                         }}
                       >
                         <IconSettings size={14} />
@@ -126,68 +124,51 @@ export const EditTab = ({
                     </Group>
                   </Tabs.Tab>
                 ))}
+
+                {/* 1. スクロールに合わせて隠れるテキストボタン */}
+                <Button variant="light" onClick={openCreateH} style={{ flexShrink: 0 }}>
+                  階層追加
+                </Button>
+
+                {/* 2. 右端に留まる + アイコン */}
+                <ActionIcon
+                  onClick={openCreateH}
+                  variant="filled" // 視認性のために色を付けるか、bg指定が必要
+                  style={{
+                    position: 'sticky',
+                    right: 0, // 右端に固定
+                    zIndex: 2, // タブより前面に
+                    flexShrink: 0, // 潰れ防止
+                  }}
+                >
+                  <IconPlus size={16} />
+                </ActionIcon>
               </Tabs.List>
             </Tabs>
           </ScrollArea>
-          <Button
-            variant="light"
-            leftSection={<IconPlus size={16} />}
-            onClick={openCreateH}
-            style={{ flexShrink: 0 }}
-          >
-            階層追加
-          </Button>
         </Group>
       </Box>
 
       {/* 2. Unit List */}
       <Box style={{ flex: 1, overflow: 'hidden' }} bg="gray.1">
         {currentHierarchy ? (
-          <ScrollArea h="100%" p="md">
-            <Grid>
+          <ScrollArea h="100%" p="md" pos={'relative'}>
+            <Grid pos={'relative'}>
               {currentUnits.map((unit, index) => (
-                <Grid.Col key={unit.unitId} span={{ base: 12, md: 6, lg: 4 }}>
-                  <Card padding="md" radius="md" withBorder shadow="sm">
-                    <Group justify="space-between" mb="xs">
-                      <Badge variant="light">Q.{index + 1}</Badge>
-                      <Group gap={4}>
-                        <ActionIcon
-                          variant="subtle"
-                          onClick={() => {
-                            setEditingUnit(unit);
-                            openUnitEdit();
-                          }}
-                        >
-                          <IconEdit size={16} />
-                        </ActionIcon>
-                        <ActionIcon
-                          variant="subtle"
-                          color="red"
-                          onClick={() => handleDeleteUnit(unit)}
-                        >
-                          <IconTrash size={16} />
-                        </ActionIcon>
-                      </Group>
-                    </Group>
-                    <Text size="sm" lineClamp={2} mb="xs" fw={500}>
-                      {unit.question || '(問題文なし)'}
-                    </Text>
-                    <Group justify="space-between" mt="auto">
-                      <Badge color="blue" variant="dot">
-                        {unit.answerType}
-                      </Badge>
-                      <Text size="xs" c="dimmed">
-                        配点: {unit.scoring}
-                      </Text>
-                    </Group>
-                    <Divider my="xs" />
-                    <Text size="xs" c="dimmed">
-                      答え: {unit.answers.join(', ')}
-                    </Text>
-                  </Card>
-                </Grid.Col>
+                <UnitDisplayCard
+                  questionNumber={index + 1}
+                  unit={unit}
+                  onEdit={() => {
+                    setEditingUnit(unit);
+                    openUnitEdit();
+                  }}
+                  onDelete={() => handleDeleteUnit(unit)}
+                />
               ))}
-              <Grid.Col span={12}>
+              <Grid.Col
+                span={12}
+                style={{ position: 'sticky', bottom: 0, zIndex: 2, flexShrink: 0 }}
+              >
                 <Button
                   fullWidth
                   variant="dashed"
@@ -225,6 +206,7 @@ export const EditTab = ({
         opened={unitEditOpened}
         onClose={closeUnitEdit}
         unit={editingUnit}
+        problemNumber={0}
         onSave={(d) =>
           editingUnit &&
           currentHierarchy &&

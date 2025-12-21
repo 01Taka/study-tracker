@@ -3,37 +3,35 @@ import { Box, Text, TextInput } from '@mantine/core';
 import { MarkInputGroup } from './MarkInputGroup';
 
 interface AnswerInputSlotProps {
-  aIdx: number;
-  displayNumber: number;
-  ans: string;
+  problemNumber: number;
+  value: string;
   answerType: string;
   disabled?: boolean;
-  onChangeAnswer: (val: string) => void;
+  onChange: (val: string) => void;
   onCommit?: () => void;
 }
 
 export const AnswerInputSlot: React.FC<AnswerInputSlotProps> = ({
-  aIdx,
-  displayNumber,
-  ans,
+  problemNumber,
+  value,
   answerType,
   disabled,
-  onChangeAnswer,
+  onChange,
   onCommit,
 }) => {
   return (
     <Box>
       <Text size="xs" c="dimmed" mb={4}>
-        Answer {displayNumber + aIdx}
+        Answer {problemNumber}
       </Text>
 
       {answerType === 'MARK' ? (
-        <MarkInputGroup value={ans} onChange={(val) => onChangeAnswer(val)} disabled={disabled} />
+        <MarkInputGroup value={value} onChange={(val) => onChange(val)} disabled={disabled} />
       ) : (
         <TextInput
           placeholder={'答えを入力'}
-          value={ans}
-          onChange={(e) => onChangeAnswer(e.target.value)}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
           disabled={disabled}
           onKeyDown={(e) => {
             if (e.key === 'Enter') onCommit?.();

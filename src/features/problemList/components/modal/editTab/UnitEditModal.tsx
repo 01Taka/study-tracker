@@ -1,166 +1,130 @@
-import React, { useEffect, useState } from 'react';
-import { IconAlertTriangle, IconPlus, IconTrash } from '@tabler/icons-react';
-import {
-  ActionIcon,
-  Button,
-  Divider,
-  Group,
-  Modal,
-  NumberInput,
-  Select,
-  Stack,
-  Text,
-  TextInput,
-} from '@mantine/core';
-import { AnswerType, ProblemType, ProblemUnit, ProblemUnitData } from '@/shared/types/app.types';
+import { useEffect, useState } from 'react';
+import { IconAlertTriangle } from '@tabler/icons-react';
+import { Button, Divider, Group, Modal, Stack, Text, TextInput } from '@mantine/core';
+import { useForm } from '@mantine/form';
+import { ProblemUnit, ProblemUnitData } from '@/shared/types/app.types';
+import { AnswerInputSlot } from './bulk/AnswerInputSlot';
+import { BulkRowSettings } from './bulk/BulkRowSettings';
 
 interface UnitEditModalProps {
   opened: boolean;
   onClose: () => void;
   unit: ProblemUnit | null;
+  problemNumber: number;
   onSave: (data: ProblemUnitData) => void;
 }
 
-export const UnitEditModal = ({ opened, onClose, unit, onSave }: UnitEditModalProps) => {
-  const [data, setData] = useState<ProblemUnitData | null>(null);
+export const UnitEditModal = ({
+  opened,
+  onClose,
+  unit,
+  problemNumber,
+  onSave,
+}: UnitEditModalProps) => {
   const [warningOpened, setWarningOpened] = useState(false);
 
+  const form = useForm<ProblemUnitData>({
+    initialValues: {
+      question: '',
+      answers: [],
+      scoring: 0,
+      problemType: 'SINGLE', // 初期値は適切なものに
+      answerType: 'TEXT',
+    },
+  });
+
+  const [answerDraft, setAnswerDraft] = useState('');
+
+  // Modalが開いたとき、またはunitが変わったときにフォームをリセット
   useEffect(() => {
-    if (unit) {
-      setData({
+    if (unit && opened) {
+      form.setValues({
         question: unit.question,
         answers: [...unit.answers],
         scoring: unit.scoring,
         problemType: unit.problemType,
         answerType: unit.answerType,
       });
+      form.resetDirty();
     }
-  }, [unit]);
+  }, [unit, opened]);
 
-  if (!data || !unit) return null;
+  if (!unit) return null;
 
-  const handlePreSave = () => {
+  const handlePreSave = (values: ProblemUnitData) => {
+    // 構造が変わったかどうかの判定
     const isStructureChanged =
-      data.answerType !== unit.answerType ||
-      data.problemType !== unit.problemType ||
-      JSON.stringify(data.answers.sort()) !== JSON.stringify(unit.answers.sort());
+      values.answerType !== unit.answerType ||
+      values.problemType !== unit.problemType ||
+      JSON.stringify([...values.answers].sort()) !== JSON.stringify([...unit.answers].sort());
 
     if (isStructureChanged) {
       setWarningOpened(true);
     } else {
-      onSave(data);
+      onSave(values);
       onClose();
     }
   };
 
   const confirmSave = () => {
-    onSave(data);
+    onSave(form.values);
     setWarningOpened(false);
     onClose();
-  };
-
-  // MARKの場合はシンプルにリセットさせるUI（既存実装準拠）
-  const addMark = (val: string) => {
-    const currentAns = data.answers[0] || '';
-    const newAnswers = [...data.answers];
-    newAnswers[0] = currentAns + val;
-    setData({ ...data, answers: newAnswers });
   };
 
   return (
     <>
       <Modal opened={opened} onClose={onClose} title="問題の編集" size="lg">
-        <Stack>
-          <Group grow>
-            <NumberInput
-              label="配点"
-              value={data.scoring}
-              onChange={(v) => setData({ ...data, scoring: Number(v) })}
-            />
-            <Select
-              label="回答タイプ"
-              data={['MARK', 'TEXT']}
-              value={data.answerType}
-              onChange={(v) => setData({ ...data, answerType: v as AnswerType, answers: [] })}
-            />
-            <Select
-              label="問題形式"
-              data={['SINGLE', 'ORDERED_SET', 'UNORDERED', 'UNORDERED_SET']}
-              value={data.problemType}
-              onChange={(v) => setData({ ...data, problemType: v as ProblemType })}
-            />
-          </Group>
+        <form onSubmit={form.onSubmit(handlePreSave)}>
+          <Stack>
+            <BulkRowSettings settings={form.values} onChange={(v) => form.setValues(v)} />
 
-          <TextInput
-            label="問題文"
-            value={data.question || ''}
-            onChange={(e) => setData({ ...data, question: e.target.value })}
-          />
+            <TextInput label="問題文" {...form.getInputProps('question')} />
 
-          <Divider label="正答の編集" labelPosition="center" />
+            <Divider label="正答の編集" labelPosition="center" />
 
-          {data.answerType === 'MARK' ? (
             <Stack>
-              <Text size="sm">現在の正答: {data.answers.join(', ')}</Text>
-              <Button size="xs" color="gray" onClick={() => setData({ ...data, answers: [''] })}>
-                クリア
-              </Button>
-              <Group gap="xs">
-                {['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '-', 'a'].map((char) => (
-                  <Button key={char} variant="default" onClick={() => addMark(char)}>
-                    {char}
-                  </Button>
-                ))}
-              </Group>
-            </Stack>
-          ) : (
-            <Stack>
-              {data.answers.map((ans, idx) => (
-                <Group key={idx}>
-                  <TextInput
-                    flex={1}
-                    value={ans}
-                    onChange={(e) => {
-                      const newArr = [...data.answers];
-                      newArr[idx] = e.target.value;
-                      setData({ ...data, answers: newArr });
-                    }}
-                  />
-                  <ActionIcon
-                    color="red"
-                    onClick={() => {
-                      const newArr = data.answers.filter((_, i) => i !== idx);
-                      setData({ ...data, answers: newArr });
-                    }}
-                  >
-                    <IconTrash size={16} />
-                  </ActionIcon>
-                </Group>
+              {form.values.answers.map((_, index) => (
+                <AnswerInputSlot
+                  key={index}
+                  problemNumber={problemNumber + index}
+                  answerType={form.values.answerType}
+                  {...(form.getInputProps(`answers.${index}`) as any)}
+                />
               ))}
-              {data.problemType !== 'SINGLE' && (
-                <Button
-                  variant="subtle"
-                  leftSection={<IconPlus size={16} />}
-                  onClick={() => setData({ ...data, answers: [...data.answers, ''] })}
-                >
-                  回答追加
-                </Button>
+              {form.values.problemType !== 'SINGLE' && (
+                <AnswerInputSlot
+                  problemNumber={problemNumber + form.values.answers.length}
+                  value={answerDraft}
+                  answerType={form.values.answerType}
+                  onChange={(val) => {
+                    if (form.values.answerType === 'TEXT') {
+                      setAnswerDraft(val);
+                    } else {
+                      if (val.trim()) {
+                        form.insertListItem('answers', val.trim());
+                        setAnswerDraft('');
+                      }
+                    }
+                  }}
+                  onCommit={() => {
+                    if (answerDraft.trim()) {
+                      form.insertListItem('answers', answerDraft.trim());
+                      setAnswerDraft('');
+                    }
+                  }}
+                />
               )}
             </Stack>
-          )}
 
-          <Button mt="md" onClick={handlePreSave}>
-            保存
-          </Button>
-        </Stack>
+            <Button mt="md" type="submit">
+              保存
+            </Button>
+          </Stack>
+        </form>
       </Modal>
 
-      <Modal
-        opened={warningOpened}
-        onClose={() => setWarningOpened(false)}
-        title="履歴連携の警告"
-        color="red"
-      >
+      <Modal opened={warningOpened} onClose={() => setWarningOpened(false)} title="履歴連携の警告">
         <Stack align="center">
           <IconAlertTriangle size={48} color="orange" />
           <Text ta="center">

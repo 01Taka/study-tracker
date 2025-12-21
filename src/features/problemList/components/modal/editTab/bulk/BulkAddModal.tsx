@@ -1,3 +1,4 @@
+import { useCallback } from 'react';
 import { IconAlertTriangle, IconDeviceFloppy } from '@tabler/icons-react';
 import { Alert, Box, Button, Group, Modal, ScrollArea, Stack, Text } from '@mantine/core';
 import { useBulkAdd } from '@/features/problemList/hooks/useBulkAdd';
@@ -23,10 +24,10 @@ export const BulkAddModal = ({ opened, onClose, onAdd, baseProblemIndex }: BulkA
     onCommitAllAnswerDraft,
   } = useBulkAdd(baseProblemIndex);
 
-  const handleSave = () => {
-    // onAdd(getSubmittableData());
+  const handleSave = useCallback(() => {
+    onAdd(rows);
     onClose();
-  };
+  }, [rows]);
 
   return (
     <Modal
@@ -35,18 +36,22 @@ export const BulkAddModal = ({ opened, onClose, onAdd, baseProblemIndex }: BulkA
       fullScreen
       title="問題一括追加"
       transitionProps={{ transition: 'slide-up' }}
-      padding={0}
+      padding={'md'}
     >
-      <Stack h="100vh" gap={0} bg="gray.1">
-        <Box p="md" bg="white" style={{ borderBottom: '1px solid #eee' }}>
-          <Text size="sm" c="dimmed">
-            一つ入力すると次のカードが解放されます。
-            <br />
-            途中でデータを消すと自動で整理されます。
-          </Text>
-        </Box>
-
+      <Stack
+        style={{ position: 'fixed', top: 0, bottom: 0, right: 0, left: 0 }}
+        gap={0}
+        bg="gray.1"
+      >
         <ScrollArea p="md">
+          <Box mt="50px" mb="xs" p="md" bg="white" style={{ borderBottom: '1px solid #eee' }}>
+            <Text size="sm" c="dimmed">
+              一つ入力すると次のカードが解放されます。
+              <br />
+              途中でデータを消すと自動で整理されます。
+            </Text>
+          </Box>
+
           {/* 1. 確定済みリスト */}
           {rows.map((row, idx) => (
             <BulkRowItem
@@ -98,6 +103,8 @@ export const BulkAddModal = ({ opened, onClose, onAdd, baseProblemIndex }: BulkA
             onChangeAnswer={() => {}}
             onChangeSettings={() => {}}
           />
+
+          <Box p={50} />
         </ScrollArea>
 
         <Box
@@ -123,10 +130,10 @@ export const BulkAddModal = ({ opened, onClose, onAdd, baseProblemIndex }: BulkA
             </Button>
             <Button
               onClick={handleSave}
-              disabled={hasError || rows.length <= 2}
+              disabled={hasError || rows.length === 0}
               leftSection={<IconDeviceFloppy size={20} />}
             >
-              {Math.max(0, rows.length - 2)}件を追加
+              {Math.max(0, rows.length)}件を追加
             </Button>
           </Group>
         </Box>
