@@ -59,7 +59,7 @@ export const CreateProblemListBottomSheet: React.FC<CreateProblemListBottomSheet
         <form onSubmit={form.onSubmit(handleSubmit)}>
           <Stack>
             <TextInput
-              label="ワークブック名"
+              label="問題リスト名"
               placeholder="例: 英単語、歴史の暗記など"
               required
               data-autofocus // 開いた時に自動でフォーカス

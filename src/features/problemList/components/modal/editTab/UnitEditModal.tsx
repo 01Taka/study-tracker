@@ -40,7 +40,7 @@ export const UnitEditModal = ({
     if (unit && opened) {
       form.setValues({
         question: unit.question,
-        answers: [...unit.answers],
+        answers: [...unit.problems.map((problem) => problem.answer)],
         scoring: unit.scoring,
         problemType: unit.problemType,
         answerType: unit.answerType,
@@ -56,7 +56,8 @@ export const UnitEditModal = ({
     const isStructureChanged =
       values.answerType !== unit.answerType ||
       values.problemType !== unit.problemType ||
-      JSON.stringify([...values.answers].sort()) !== JSON.stringify([...unit.answers].sort());
+      JSON.stringify([...values.answers].sort()) !==
+        JSON.stringify([...unit.problems.map((problem) => problem.answer)].sort());
 
     if (isStructureChanged) {
       setWarningOpened(true);

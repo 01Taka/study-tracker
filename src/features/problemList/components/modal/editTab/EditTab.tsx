@@ -15,7 +15,7 @@ import {
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { ProblemUnit, ProblemUnitData, UserDefinedHierarchy } from '@/shared/types/app.types';
-import { BulkAddModal } from './bulk/BulkAddModal';
+import { UnitBulkEditor } from './addModal/UnitBulkEditor';
 import { UnitDisplayCard } from './UnitDisplayCard';
 import { UnitEditModal } from './UnitEditModal';
 
@@ -213,7 +213,9 @@ export const EditTab = ({
         onSave={(d) => editingUnit && currentHierarchy && updateUnit(editingUnit.unitId, d)}
       />
 
-      <BulkAddModal
+      <UnitBulkEditor opened={bulkAddOpened} onClose={closeBulkAdd} />
+
+      {/* <BulkAddModal
         opened={bulkAddOpened}
         onClose={closeBulkAdd}
         baseProblemIndex={totalProblemsCount}
@@ -227,7 +229,7 @@ export const EditTab = ({
             index: undefined,
           })
         }
-      />
+      /> */}
     </Stack>
   );
 };
