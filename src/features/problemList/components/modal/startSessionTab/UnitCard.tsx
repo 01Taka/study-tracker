@@ -1,5 +1,6 @@
 import { alpha, Badge, Box, Card, Group, rem, Stack, Text } from '@mantine/core';
 import { PROBLEM_TYPE_LABELS } from '@/features/problemList/constants/start-session-constants';
+import { getProblemRangeFromUnit } from '@/shared/functions/unit-utils';
 import {
   ProblemNumberResult,
   ProblemRange,
@@ -11,19 +12,12 @@ import {
 /**
  * ユニットカード：選択状態に応じたスタイリング
  */
-export const UnitCard = ({
-  unit,
-  range,
-  isSelected,
-}: {
-  unit: ProblemUnit;
-  range: ProblemRange;
-  isSelected: boolean;
-}) => {
-  const isSingle = range.start === range.end;
-  const problemNumbersText = isSingle
+export const UnitCard = ({ unit, isSelected }: { unit: ProblemUnit; isSelected: boolean }) => {
+  const range = getProblemRangeFromUnit(unit);
+
+  const problemNumbersText = range.isSingle
     ? `Q${range.start}`
-    : `Q${range.start} ~ Q${range.end} (${range.problemNumbers.length}問)`;
+    : `Q${range.start} ~ Q${range.end} (${range.count}問)`;
 
   return (
     <Card
@@ -55,7 +49,7 @@ export const UnitCard = ({
               fw={900}
               c={isSelected ? 'dark.4' : 'gray.6'}
               style={{
-                fontSize: rem(isSingle ? 20 : 18),
+                fontSize: rem(range.isSingle ? 20 : 18),
                 letterSpacing: rem(1),
                 lineHeight: 1.2,
               }}

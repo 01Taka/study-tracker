@@ -10,7 +10,6 @@ import {
   Text,
 } from '@mantine/core';
 import {
-  ProblemNumberResult,
   ProblemUnit,
   StartSessionFilterType,
   UserDefinedHierarchy,
@@ -22,7 +21,6 @@ interface StartSessionTabProps {
     hierarchy: UserDefinedHierarchy;
     units: ProblemUnit[];
   }[];
-  problemNumberMap: ProblemNumberResult;
   getIsSelected: (unitId: string, filter: StartSessionFilterType) => boolean;
   getSelectedCount: (filter: StartSessionFilterType) => number;
   onStartSession: (type: StartSessionFilterType) => void;
@@ -30,7 +28,6 @@ interface StartSessionTabProps {
 
 export const StartSessionTab: React.FC<StartSessionTabProps> = ({
   listData,
-  problemNumberMap,
   getIsSelected,
   getSelectedCount,
   onStartSession,
@@ -78,14 +75,10 @@ export const StartSessionTab: React.FC<StartSessionTabProps> = ({
                 />
                 <Stack gap="sm">
                   {data.units.map((unit) => {
-                    const range = problemNumberMap[data.hierarchy.id]?.[unit.unitId];
-                    if (!range) return null;
-
                     return (
                       <UnitCard
                         key={unit.unitId}
                         unit={unit}
-                        range={range}
                         isSelected={getIsSelected(unit.unitId, filter)}
                       />
                     );

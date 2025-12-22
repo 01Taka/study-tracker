@@ -4,9 +4,8 @@ import { useForm } from '@mantine/form';
 import { useAttemptHistory } from '@/features/data/hooks/useAttemptHistory';
 import { useProblemListData } from '@/features/data/hooks/useProblemListData';
 import { useProblemUnitData } from '@/features/data/hooks/useProblemUnitData';
-import { UnitAttemptUserAnswers } from '@/shared/types/app.types';
+import { UnitAttemptUserAnswers, UserDefinedHierarchy } from '@/shared/types/app.types';
 
-// 修正された型定義
 interface AnswerValues {
   answers: {
     [unitPath: string]: UnitAttemptUserAnswers;
@@ -24,22 +23,27 @@ export const useTackleForm = (workbookId: string, problemListId: string) => {
 
   // 現在のタブに基づいたユニット情報の取得
   const currentHierarchy = problemList?.hierarchies.find((h) => h.id === activeTab);
-  const units = currentHierarchy ? getProblemUnits(currentHierarchy.unitVersionPaths) : [];
+  const units = currentHierarchy
+    ? getProblemUnits(currentHierarchy.unitVersionPaths, activeSession?.attemptingUnitIds ?? [])
+    : [];
 
   // フォームの初期値計算
   const initialAnswers = useMemo(() => {
-    if (!problemList) return {};
+    if (!problemList || !activeSession) return {};
     const obj: AnswerValues['answers'] = {};
 
     problemList.hierarchies.forEach((h) => {
       // 全階層のユニットを事前に取得して初期値を生成
-      const allUnitsInHierarchy = getProblemUnits(h.unitVersionPaths);
+      const allUnitsInHierarchy = getProblemUnits(
+        h.unitVersionPaths,
+        activeSession.attemptingUnitIds
+      );
 
       allUnitsInHierarchy.forEach((unit) => {
         // unit.answers の数だけ回答欄を初期化
-        const answerMap: Record<string, string> = {};
-        unit.answers.forEach((_, index) => {
-          answerMap[index.toString()] = '';
+        const answerMap: Record<number, string> = {};
+        unit.problems.forEach((problem) => {
+          answerMap[problem.problemNumber] = '';
         });
 
         obj[unit.unitId] = {
@@ -49,7 +53,7 @@ export const useTackleForm = (workbookId: string, problemListId: string) => {
       });
     });
     return obj;
-  }, [problemList, getProblemUnits]);
+  }, [problemList, activeSession, getProblemUnits]);
 
   const form = useForm<AnswerValues>({
     initialValues: { answers: {} },
@@ -71,15 +75,28 @@ export const useTackleForm = (workbookId: string, problemListId: string) => {
 
   const handleSubmit = useCallback(
     (values: typeof form.values) => {
-      console.log(activeSession);
-
       if (activeSession?.id) {
-        endSession(values.answers, Object.values(unitRecord));
-        navigate(`/result/${activeSession.id}`);
+        const success = endSession(values.answers, Object.values(unitRecord));
+        if (success) {
+          navigate(`/result/${activeSession.id}`);
+        }
       }
     },
     [activeSession, endSession]
   );
+
+  const filteredHierarchies: UserDefinedHierarchy[] = useMemo(() => {
+    if (!problemList || !activeSession) return [];
+    return problemList.hierarchies.map((hierarchy) => {
+      const paths = hierarchy.unitVersionPaths.filter((path) =>
+        activeSession.attemptingUnitIds.includes(path)
+      );
+      return {
+        ...hierarchy,
+        unitVersionPaths: paths,
+      };
+    });
+  }, [problemList, activeSession]);
 
   return {
     problemList,
@@ -88,6 +105,7 @@ export const useTackleForm = (workbookId: string, problemListId: string) => {
     form,
     units,
     isLoading: !problemList,
+    filteredHierarchies,
     handleSubmit,
   };
 };

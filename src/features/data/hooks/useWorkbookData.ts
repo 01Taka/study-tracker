@@ -90,7 +90,7 @@ export const useWorkbookData = () => {
   return {
     workbooks,
     reloadWorkbook,
-    setWorkbooks: updateWorkbooks,
+    updateWorkbooks,
     onCreate,
     getWorkbook,
     saveWorkbooks,

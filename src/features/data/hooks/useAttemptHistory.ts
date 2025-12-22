@@ -1,14 +1,19 @@
 import { useCallback, useEffect, useState } from 'react';
 import { createUnitAttemptResult } from '@/shared/functions/attempt-result';
 import { generateId } from '@/shared/functions/generate-id';
-import { AttemptHistory, ProblemUnit, UnitAttemptUserAnswers } from '@/shared/types/app.types';
+import {
+  AttemptHistory,
+  AttemptingSessionData,
+  ProblemUnit,
+  UnitAttemptUserAnswers,
+} from '@/shared/types/app.types';
 
 const STORAGE_KEY = 'attempt_history_list';
 const ACTIVE_SESSION_KEY = 'active_attempt_session';
 
 export const useAttemptHistory = () => {
   const [histories, setHistories] = useState<AttemptHistory[]>([]);
-  const [activeSession, setActiveSession] = useState<Partial<AttemptHistory> | null>(null);
+  const [activeSession, setActiveSession] = useState<AttemptingSessionData | null>(null);
 
   // 初期ロード
   useEffect(() => {
@@ -23,15 +28,21 @@ export const useAttemptHistory = () => {
    * セッション開始
    */
   const startSession = useCallback(
-    (args: { problemListVersionId: string; workbookId: string; problemListId: string }) => {
+    (args: {
+      problemListVersionId: string;
+      workbookId: string;
+      problemListId: string;
+      attemptingUnitIds: string[];
+    }) => {
       if (activeSession) return;
 
-      const newSession: Partial<AttemptHistory> = {
+      const newSession: AttemptingSessionData = {
         id: generateId(),
         startTime: Date.now(),
         problemListVersionId: args.problemListVersionId,
         workbookId: args.workbookId,
         problemListId: args.problemListId,
+        attemptingUnitIds: args.attemptingUnitIds,
       };
 
       setActiveSession(newSession);
@@ -45,9 +56,14 @@ export const useAttemptHistory = () => {
    */
   const endSession = useCallback(
     (userAnswers: Record<string, UnitAttemptUserAnswers>, units: ProblemUnit[]) => {
-      if (!activeSession) return;
+      if (!activeSession) return false;
 
       const unitAttempts = createUnitAttemptResult(userAnswers, units);
+
+      if (!unitAttempts) {
+        console.error('正常に保存できませんでした');
+        return false;
+      }
 
       const completeHistory: AttemptHistory = {
         id: activeSession.id!,
@@ -67,6 +83,7 @@ export const useAttemptHistory = () => {
 
       setActiveSession(null);
       localStorage.removeItem(ACTIVE_SESSION_KEY);
+      return true;
     },
     [activeSession]
   );

@@ -4,7 +4,7 @@ import { generateId } from '@/shared/functions/generate-id';
 import { UserDefinedHierarchy } from '@/shared/types/app.types';
 
 export const useHierarchyData = (reloadWorkbook?: () => void) => {
-  const { setWorkbooks } = useWorkbookData();
+  const { updateWorkbooks } = useWorkbookData();
 
   /**
    * 1. 新しい空のUserDefinedHierarchyを作成する
@@ -17,7 +17,7 @@ export const useHierarchyData = (reloadWorkbook?: () => void) => {
         unitVersionPaths: [],
       };
 
-      setWorkbooks((prevWorkbooks) =>
+      updateWorkbooks((prevWorkbooks) =>
         prevWorkbooks.map((wb) => {
           if (wb.id !== workbookId) return wb;
           return {
@@ -35,7 +35,7 @@ export const useHierarchyData = (reloadWorkbook?: () => void) => {
       // 更新後にリロードを実行
       reloadWorkbook?.();
     },
-    [setWorkbooks, reloadWorkbook]
+    [updateWorkbooks, reloadWorkbook]
   );
 
   /**
@@ -43,7 +43,7 @@ export const useHierarchyData = (reloadWorkbook?: () => void) => {
    */
   const onDeleteHierarchy = useCallback(
     (workbookId: string, problemListId: string, hierarchyId: string) => {
-      setWorkbooks((prevWorkbooks) =>
+      updateWorkbooks((prevWorkbooks) =>
         prevWorkbooks.map((wb) => {
           if (wb.id !== workbookId) return wb;
           return {
@@ -60,20 +60,22 @@ export const useHierarchyData = (reloadWorkbook?: () => void) => {
       );
       reloadWorkbook?.();
     },
-    [setWorkbooks, reloadWorkbook]
+    [updateWorkbooks, reloadWorkbook]
   );
 
   /**
    * 3. ヒエラルキーのunitVersionPathsを一括追加する
+   * targetIndex が指定された場合はその位置に挿入し、指定がない場合は末尾に追加する
    */
   const onAddUnitPaths = useCallback(
     (
       workbookId: string,
       problemListId: string,
       hierarchyId: string,
-      unitVersionPaths: string[]
+      unitVersionPaths: string[],
+      targetIndex?: number
     ) => {
-      setWorkbooks((prevWorkbooks) =>
+      updateWorkbooks((prevWorkbooks) =>
         prevWorkbooks.map((wb) => {
           if (wb.id !== workbookId) return wb;
           return {
@@ -84,9 +86,20 @@ export const useHierarchyData = (reloadWorkbook?: () => void) => {
                 ...pl,
                 hierarchies: pl.hierarchies.map((h) => {
                   if (h.id !== hierarchyId) return h;
+
+                  // 挿入位置の決定
+                  const index = targetIndex ?? h.unitVersionPaths.length;
+
+                  // 指定位置に新しいパスを挿入した新しい配列を作成
+                  const nextPaths = [
+                    ...h.unitVersionPaths.slice(0, index),
+                    ...unitVersionPaths,
+                    ...h.unitVersionPaths.slice(index),
+                  ];
+
                   return {
                     ...h,
-                    unitVersionPaths: [...h.unitVersionPaths, ...unitVersionPaths],
+                    unitVersionPaths: nextPaths,
                   };
                 }),
               };
@@ -96,7 +109,7 @@ export const useHierarchyData = (reloadWorkbook?: () => void) => {
       );
       reloadWorkbook?.();
     },
-    [setWorkbooks, reloadWorkbook]
+    [updateWorkbooks, reloadWorkbook]
   );
 
   /**
@@ -110,7 +123,7 @@ export const useHierarchyData = (reloadWorkbook?: () => void) => {
       targetPath: string,
       newPath: string
     ) => {
-      setWorkbooks((prevWorkbooks) =>
+      updateWorkbooks((prevWorkbooks) =>
         prevWorkbooks.map((wb) => {
           if (wb.id !== workbookId) return wb;
           return {
@@ -135,7 +148,7 @@ export const useHierarchyData = (reloadWorkbook?: () => void) => {
       );
       reloadWorkbook?.();
     },
-    [setWorkbooks, reloadWorkbook]
+    [updateWorkbooks, reloadWorkbook]
   );
 
   /**
@@ -143,7 +156,7 @@ export const useHierarchyData = (reloadWorkbook?: () => void) => {
    */
   const onRemoveUnitPath = useCallback(
     (workbookId: string, problemListId: string, hierarchyId: string, targetPath: string) => {
-      setWorkbooks((prevWorkbooks) =>
+      updateWorkbooks((prevWorkbooks) =>
         prevWorkbooks.map((wb) => {
           if (wb.id !== workbookId) return wb;
           return {
@@ -166,7 +179,7 @@ export const useHierarchyData = (reloadWorkbook?: () => void) => {
       );
       reloadWorkbook?.();
     },
-    [setWorkbooks, reloadWorkbook]
+    [updateWorkbooks, reloadWorkbook]
   );
 
   return {

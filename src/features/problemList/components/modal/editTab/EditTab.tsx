@@ -27,15 +27,15 @@ interface EditTabProps {
   onDeleteHierarchy: (wbId: string, plId: string, hId: string) => void;
   onUpdateHierarchyName?: (wbId: string, plId: string, hId: string, name: string) => void;
   getProblemUnits: (paths: string[]) => ProblemUnit[];
-  addUnitsToHierarchy: (wbId: string, plId: string, hId: string, data: ProblemUnitData[]) => void;
+  insertUnitsToHierarchy: (args: {
+    workbookId: string;
+    problemListId: string;
+    hierarchyId: string;
+    dataList: ProblemUnitData[];
+    index?: number;
+  }) => void;
   removeUnitFromHierarchy: (wbId: string, plId: string, hId: string, path: string) => void;
-  updateUnit: (
-    wbId: string,
-    plId: string,
-    hId: string,
-    unitId: string,
-    newData: ProblemUnitData
-  ) => void;
+  updateUnit: (unitId: string, newData: ProblemUnitData) => void;
 }
 
 export const EditTab = ({
@@ -46,7 +46,7 @@ export const EditTab = ({
   onDeleteHierarchy,
   onUpdateHierarchyName,
   getProblemUnits,
-  addUnitsToHierarchy,
+  insertUnitsToHierarchy,
   removeUnitFromHierarchy,
   updateUnit,
 }: EditTabProps) => {
@@ -76,13 +76,10 @@ export const EditTab = ({
   }, [currentHierarchy, getProblemUnits]);
 
   // Total Answer Count Calculation (for base index)
-  const totalAnswerCount = useMemo(() => {
+  const totalProblemsCount = useMemo(() => {
     let count = 0;
-    // 現在の階層より前の階層のカウントも含めるならここで計算が必要だが、
-    // 今回は「unit間で継続」= 現在のリスト内での継続と仮定
-    // もし全体通し番号ならロジック調整が必要
     currentUnits.forEach((u) => {
-      count += u.problemType === 'SINGLE' ? 1 : u.answers.length;
+      count += u.problemType === 'SINGLE' ? 1 : u.problems.length;
     });
     return count;
   }, [currentUnits]);
@@ -213,20 +210,22 @@ export const EditTab = ({
         onClose={closeUnitEdit}
         unit={editingUnit}
         problemNumber={0}
-        onSave={(d) =>
-          editingUnit &&
-          currentHierarchy &&
-          updateUnit(workbookId, problemListId, currentHierarchy.id, editingUnit.unitId, d)
-        }
+        onSave={(d) => editingUnit && currentHierarchy && updateUnit(editingUnit.unitId, d)}
       />
 
       <BulkAddModal
         opened={bulkAddOpened}
         onClose={closeBulkAdd}
-        baseProblemIndex={totalAnswerCount}
+        baseProblemIndex={totalProblemsCount}
         onAdd={(units) =>
           currentHierarchy &&
-          addUnitsToHierarchy(workbookId, problemListId, currentHierarchy.id, units)
+          insertUnitsToHierarchy({
+            workbookId,
+            problemListId,
+            hierarchyId: currentHierarchy.id,
+            dataList: units,
+            index: undefined,
+          })
         }
       />
     </Stack>

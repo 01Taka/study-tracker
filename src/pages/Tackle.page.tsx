@@ -19,7 +19,7 @@ import {
 import { ProblemUnitCard } from '@/features/tackle/components/ProblemUnitCard';
 import { EVAL_BASE_CONFIG } from '@/features/tackle/constants/evaluations';
 import { useTackleForm } from '@/features/tackle/hooks/useTackleForm';
-import { useProblemNumbers } from '@/shared/hooks/useProblemNumbers';
+import { getProblemRangeFromUnit } from '@/shared/functions/unit-utils';
 
 export const TacklePage: React.FC = () => {
   const { workbookId = '', problemListId = '' } = useParams();
@@ -30,10 +30,16 @@ export const TacklePage: React.FC = () => {
   const [lastInputIndex, setLastInputIndex] = useState(0);
   const [settingsOpened, setSettingsOpened] = useState(true);
 
-  const { problemList, activeTab, setActiveTab, form, units, isLoading, handleSubmit } =
-    useTackleForm(workbookId, problemListId);
-
-  const { problemNumberMap } = useProblemNumbers({ def: units });
+  const {
+    problemList,
+    activeTab,
+    filteredHierarchies,
+    setActiveTab,
+    form,
+    units,
+    isLoading,
+    handleSubmit,
+  } = useTackleForm(workbookId, problemListId);
 
   const scrollToUnit = useCallback((index: number) => {
     const element = cardRefs.current.get(index);
@@ -159,11 +165,11 @@ export const TacklePage: React.FC = () => {
             radius="xl"
             keepMounted={false}
           >
-            {problemList.hierarchies.map((h) => (
+            {filteredHierarchies.map((h) => (
               <Tabs.Panel key={h.id} value={h.id} pt="md">
                 <Stack gap="lg">
                   {units.map((unit, index) => {
-                    const problemNumber = problemNumberMap['def'][unit.unitId];
+                    const range = getProblemRangeFromUnit(unit);
                     return (
                       <div
                         key={`${h.id}-${unit.unitId}`}
@@ -178,12 +184,15 @@ export const TacklePage: React.FC = () => {
                       >
                         <ProblemUnitCard
                           unit={unit}
-                          problemNumberStart={problemNumber.start}
-                          problemNumberEnd={problemNumber.end}
+                          problemNumberStart={range.start}
+                          problemNumberEnd={range.end}
                           answers={form.values.answers[unit.unitId]?.answers ?? {}}
                           selfEval={form.values.answers[unit.unitId]?.selfEval ?? 'UNRATED'}
-                          onAnswerChange={(aIndex, val) => {
-                            form.setFieldValue(`answers.${unit.unitId}.answers.${aIndex}`, val);
+                          onAnswerChange={(problemNumber, val) => {
+                            form.setFieldValue(
+                              `answers.${unit.unitId}.answers.${problemNumber}`,
+                              val
+                            );
                             setLastInputIndex(index);
                           }}
                           onEvalChange={(val) => {

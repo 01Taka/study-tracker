@@ -38,7 +38,17 @@ export const useUnitSelection = (
   );
 
   /**
-   * 3. 外部へ公開する関数：現在のフィルターでの合計選択数を取得
+   * 3. フィルターに合致するユニットIDの配列を取得
+   */
+  const getSelectedUnitIds = useCallback(
+    (filter: StartSessionFilterType): string[] => {
+      return unitIds.filter((unitId) => checkIsSelected(unitId, filter));
+    },
+    [unitIds, checkIsSelected]
+  );
+
+  /**
+   * 4. 外部へ公開する関数：現在のフィルターでの合計選択数を取得
    */
   const getSelectedCount = useCallback(
     (filter: StartSessionFilterType): number => {
@@ -51,6 +61,7 @@ export const useUnitSelection = (
 
   return {
     getIsSelected,
+    getSelectedUnitIds,
     getSelectedCount,
   };
 };

@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import { IconPlus } from '@tabler/icons-react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { Affix, Box, Button, Transition } from '@mantine/core';
-import { useAttemptHistory } from '@/features/data/hooks/useAttemptHistory';
 import { useProblemListData } from '@/features/data/hooks/useProblemListData';
 import { TopNav } from '@/features/navigation/TopNav';
 import { CreateProblemListBottomSheet } from '@/features/problemList/components/CreateProblemListBottomSheet';
@@ -10,14 +9,11 @@ import { ProblemListModal } from '@/features/problemList/components/modal/Proble
 import { ProblemListsDisplay } from '@/features/problemList/components/ProblemListsDisplay';
 
 export function ProblemListPage() {
-  const navigate = useNavigate();
   const { workbookId } = useParams();
 
   // reloadWorkbook を取得
   const { problemLists, currentWorkbook, workbookName, onCreate, reloadWorkbook } =
     useProblemListData(workbookId ?? '');
-
-  const { isSessionActive, startSession, cancelSession } = useAttemptHistory();
 
   const [openedCreateModal, setOpenedCreateModal] = useState(false);
 
@@ -28,20 +24,6 @@ export function ProblemListPage() {
   // これにより reloadWorkbook() 実行後、ここも自動的に最新データになる
   const openedProblemList =
     openedProblemListIndex !== null ? problemLists[openedProblemListIndex] : null;
-
-  const handleStartSession = () => {
-    if (currentWorkbook && openedProblemList) {
-      if (isSessionActive) {
-        cancelSession();
-      }
-      startSession({
-        problemListVersionId: 'ver1.0',
-        workbookId: currentWorkbook.id,
-        problemListId: openedProblemList.id,
-      });
-      navigate(`/tackle/${currentWorkbook.id}/${openedProblemList.id}`);
-    }
-  };
 
   return (
     <>
@@ -57,11 +39,9 @@ export function ProblemListPage() {
 
       <ProblemListModal
         workbook={currentWorkbook}
-        // openedProblemList は最新の参照なので、更新が反映される
         opened={!!openedProblemList}
         onClose={() => setOpenedProblemListIndex(null)}
         problemList={openedProblemList}
-        onStartSession={handleStartSession}
         reloadWorkbook={reloadWorkbook}
       />
 

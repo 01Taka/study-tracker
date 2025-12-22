@@ -19,7 +19,7 @@ interface ProblemUnitCardProps {
   problemNumberEnd?: number;
   answers: Record<string, string>;
   selfEval: SelfEvalType; // 型を適用
-  onAnswerChange: (index: string, val: string) => void;
+  onAnswerChange: (problemNumber: number, val: string) => void;
   onEvalChange: (val: SelfEvalType) => void; // 型を適用
 }
 
@@ -55,24 +55,21 @@ export const ProblemUnitCard = ({
             解答入力
           </Text>
           <Stack gap="xs">
-            {unit.answers.map((_, aIndex) => {
-              const idxKey = aIndex.toString();
-              const val = answers[idxKey] || '';
+            {unit.problems.map((data) => {
+              const val = answers[data.problemNumber] || '';
 
               return (
-                <Group key={idxKey} gap="xs">
-                  {unit.answers.length > 1 && (
-                    <Text size="xs" w={20}>
-                      {problemNumberStart + aIndex}.
-                    </Text>
-                  )}
+                <Group key={`${unit.unitId}-${data.problemNumber}`} gap="xs">
+                  <Text size="xs" w={20}>
+                    {data.problemNumber}.
+                  </Text>
                   <Box style={{ flex: 1 }}>
                     {unit.answerType === 'MARK' ? (
                       <SegmentedControl
                         fullWidth
                         value={val}
                         color="blue"
-                        onChange={(v) => onAnswerChange(idxKey, val === v ? '' : v)}
+                        onChange={(v) => onAnswerChange(data.problemNumber, val === v ? '' : v)}
                         data={MARK_SELECTIONS}
                         transitionDuration={0}
                       />
@@ -80,7 +77,7 @@ export const ProblemUnitCard = ({
                       <TextInput
                         placeholder="答えを入力"
                         value={val}
-                        onChange={(e) => onAnswerChange(idxKey, e.currentTarget.value)}
+                        onChange={(e) => onAnswerChange(data.problemNumber, e.currentTarget.value)}
                       />
                     )}
                   </Box>

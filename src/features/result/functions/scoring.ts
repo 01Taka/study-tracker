@@ -1,33 +1,31 @@
-// features/results/utils/scoring.ts
-import { ProblemUnit, UnitAttemptResultData } from '@/shared/types/app.types';
+import { UnitAttemptResultData } from '@/shared/types/app.types';
 
-export const calculateScore = (unit: ProblemUnit, attempt: UnitAttemptResultData | undefined) => {
+export const calculateScore = (attempt: UnitAttemptResultData | undefined) => {
   if (!attempt) return { earned: 0, isPerfect: false };
-  const correctAnswers = unit.answers;
-  const userAnswers = Array.from({ length: correctAnswers.length }).map(
-    (_, i) => attempt.results[String(i)]?.answer || ''
-  );
-  const normalize = (s: string) => s.trim().toLowerCase();
 
-  if (unit.problemType === 'UNORDERED') {
-    let matches = 0;
-    const pool = [...correctAnswers].map(normalize);
-    userAnswers.forEach((ans) => {
-      const idx = pool.indexOf(normalize(ans));
-      if (ans && idx !== -1) {
-        matches++;
-        pool.splice(idx, 1);
-      }
-    });
-    const earned = (unit.scoring / correctAnswers.length) * matches;
-    return { earned, isPerfect: matches === correctAnswers.length };
+  // resultKey (例: "CONFIDENT_CORRECT", "NONE_WRONG") から判定ステータスを抽出
+  const isUnitCorrect = attempt.resultKey.endsWith('_CORRECT');
+
+  // 1. 完答・順序固定・順不同完答などの「完答が条件」のタイプ
+  if (attempt.problemType !== 'UNORDERED') {
+    return {
+      earned: isUnitCorrect ? attempt.scoring : 0,
+      isPerfect: isUnitCorrect,
+    };
   }
 
-  const isMatch =
-    unit.problemType === 'UNORDERED_SET'
-      ? [...userAnswers].map(normalize).sort().join('|') ===
-        [...correctAnswers].map(normalize).sort().join('|')
-      : userAnswers.map(normalize).join('|') === correctAnswers.map(normalize).join('|');
+  // 2. UNORDERED（部分点あり）の場合
+  // このタイプのみ、個別の judge ステータスを見て配点を按分する
+  const totalProblems = attempt.results.length;
+  if (totalProblems === 0) return { earned: 0, isPerfect: false };
 
-  return { earned: isMatch ? unit.scoring : 0, isPerfect: isMatch };
+  const correctCount = attempt.results.filter((r) => r.judge === 'CORRECT').length;
+
+  // 浮動小数点誤差を考慮して丸め処理
+  const earned = Math.round((attempt.scoring / totalProblems) * correctCount);
+
+  return {
+    earned,
+    isPerfect: isUnitCorrect, // UNORDEREDでも全問正解なら resultKey は CORRECT になる想定
+  };
 };

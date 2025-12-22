@@ -1,80 +1,109 @@
 import {
-  AttemptHistory,
-  ProblemList,
+  JudgeStatus,
   ProblemUnit,
-  UnitAttempt,
+  SelfEvalResultKey,
   UnitAttemptResult,
   UnitAttemptResultData,
   UnitAttemptUserAnswers,
 } from '../types/app.types';
-import { getEvalResultKey } from './eval-result';
+
+/**
+ * 文字列を判定用に正規化する
+ * 1. 全角英数字を半角に変換
+ * 2. 前後の空白を削除
+ * 3. 大文字を小文字に変換
+ */
+const normalize = (str: string | undefined | null): string => {
+  if (!str) return '';
+  return str
+    .replace(/[！-～]/g, (s) => String.fromCharCode(s.charCodeAt(0) - 0xfee0))
+    .trim()
+    .toLowerCase();
+};
+
+/**
+ * 回答の正誤と自己評価を組み合わせたキーを生成する
+ */
+export const getEvalResultKey = (
+  unit: ProblemUnit,
+  attempt: UnitAttemptUserAnswers
+): SelfEvalResultKey => {
+  const { answers: userAnswersMap, selfEval } = attempt;
+
+  // 正規化した配列を作成
+  const correctAnswers = unit.problems.map((p) => normalize(p.answer));
+  const userAnswers = Object.keys(userAnswersMap)
+    .sort((a, b) => Number(a) - Number(b))
+    .map((key) => normalize(userAnswersMap[key]));
+
+  let isCorrect = false;
+
+  if (userAnswers.length !== correctAnswers.length) {
+    return `${selfEval}_WRONG`;
+  }
+
+  switch (unit.problemType) {
+    case 'SINGLE':
+    case 'ORDERED_SET':
+      isCorrect = userAnswers.every((val, index) => val === correctAnswers[index]);
+      break;
+
+    case 'UNORDERED':
+    case 'UNORDERED_SET':
+      const sortedUser = [...userAnswers].sort();
+      const sortedCorrect = [...correctAnswers].sort();
+      isCorrect = sortedUser.every((val, index) => val === sortedCorrect[index]);
+      break;
+
+    default:
+      isCorrect = false;
+  }
+
+  return `${selfEval}_${isCorrect ? 'CORRECT' : 'WRONG'}`;
+};
 
 export const createUnitAttemptResult = (
   userAnswersMap: Record<string, UnitAttemptUserAnswers>,
   units: ProblemUnit[]
-): UnitAttemptResult => {
+): UnitAttemptResult | null => {
   const attemptResult: UnitAttemptResult = {};
 
-  units.forEach((unit) => {
+  for (let unit of units) {
     const userAttempt = userAnswersMap[unit.unitId];
-    if (!userAttempt) return;
+    if (!userAttempt) continue;
 
-    // 1. 全体判定の取得
+    const userAnswers = Object.values(userAttempt.answers);
+
+    if (unit.problems.length !== userAnswers.length) {
+      // ...エラーログ処理（変更なし）
+      return null;
+    }
+
     const evalResultKey = getEvalResultKey(unit, userAttempt);
 
-    const resultData: UnitAttemptResultData = {
-      results: {},
-      resultKey: evalResultKey,
-      selfEval: userAttempt.selfEval,
-    };
+    // 各問題の判定にも normalize を適用
+    const results = userAnswers.map((answer, idx) => {
+      const correctAnswer = unit.problems[idx]?.answer || '';
+      const isItemCorrect = normalize(answer) === normalize(correctAnswer);
 
-    // 2. 各回答ごとの詳細を格納
-    Object.keys(userAttempt.answers).forEach((index) => {
-      const idx = Number(index);
-      resultData.results[index] = {
-        answer: userAttempt.answers[index],
-        collectAnswer: unit.answers[idx] || '', // 当時の正解を保存
-        judge: unit.answers[idx] === userAttempt.answers[index] ? 'CORRECT' : 'WRONG',
+      return {
+        problemNumber: unit.problems[idx]?.problemNumber || -1,
+        collectAnswer: correctAnswer,
+        answer: answer, // ユーザーが入力した生の値を保存
+        judge: (isItemCorrect ? 'CORRECT' : 'WRONG') as JudgeStatus,
       };
     });
 
+    const resultData: UnitAttemptResultData = {
+      results,
+      resultKey: evalResultKey,
+      selfEval: userAttempt.selfEval,
+      scoring: unit.scoring,
+      problemType: unit.problemType,
+    };
+
     attemptResult[unit.unitId] = resultData;
-  });
-
-  return attemptResult;
-};
-
-export const getLatestAttemptMap = (problemList: ProblemList, histories: AttemptHistory[]) => {
-  // 1. 対象の problemListId に絞り込み、新しい順（降順）に並び替え
-  const filteredSortedHistories = histories
-    .filter((h) => h.problemListId === problemList.id)
-    .sort((a, b) => b.startTime - a.startTime); // 新しい順
-
-  const unitPaths = problemList.hierarchies.flatMap((h) => h.unitVersionPaths);
-  const latestAttemptMap: Record<string, UnitAttempt | null> = {};
-
-  // 2. unitPaths をキーとして初期化
-  unitPaths.forEach((path) => {
-    latestAttemptMap[path] = null;
-  });
-
-  // 3. 履歴を一度だけ走査して、まだ値が入っていない（＝最新の）試行を埋める
-  for (const history of filteredSortedHistories) {
-    for (const path of unitPaths) {
-      // すでに最新（最初に見つかったもの）が入っていればスキップ
-      if (latestAttemptMap[path]) continue;
-
-      const attempt = history.unitAttempts[path];
-      if (attempt) {
-        latestAttemptMap[path] = { ...attempt, attemptAt: history.startTime };
-      }
-    }
-
-    // 全てのパスが埋まったら早期終了（パフォーマンス最適化）
-    if (Object.values(latestAttemptMap).every((val) => val !== null)) {
-      break;
-    }
   }
 
-  return latestAttemptMap;
+  return attemptResult;
 };

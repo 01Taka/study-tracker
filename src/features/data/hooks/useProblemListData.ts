@@ -4,8 +4,7 @@ import { generateId } from '@/shared/functions/generate-id';
 import { ProblemList } from '@/shared/types/app.types';
 
 export const useProblemListData = (workbookId: string) => {
-  // updateWorkbooks (保存機能付き) を setWorkbooks として取得
-  const { workbooks, setWorkbooks, reloadWorkbook } = useWorkbookData();
+  const { workbooks, updateWorkbooks, reloadWorkbook } = useWorkbookData();
 
   /**
    * 原因対策: workbooks 自体を依存配列に入れ、
@@ -29,13 +28,13 @@ export const useProblemListData = (workbookId: string) => {
       };
 
       // 保存機能付きの updater を使用
-      setWorkbooks((latestWorkbooks) =>
+      updateWorkbooks((latestWorkbooks) =>
         latestWorkbooks.map((wb) =>
           wb.id === workbookId ? { ...wb, problemLists: [...wb.problemLists, newProblemList] } : wb
         )
       );
     },
-    [workbookId, setWorkbooks]
+    [workbookId, updateWorkbooks]
   );
 
   const getProblemList = useCallback(

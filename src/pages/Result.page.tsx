@@ -1,4 +1,3 @@
-// features/results/ResultPage.tsx
 import React from 'react';
 import { Link, useParams } from 'react-router-dom';
 import {
@@ -18,8 +17,7 @@ import { useResultCalculation } from '@/features/result/hooks/useResultCalculati
 
 export const ResultPage: React.FC = () => {
   const { resultId = '' } = useParams<{ resultId: string }>();
-  const { history, unitRecord, currentProblemList, scoreSummary, problemNumberMap, isLoading } =
-    useResultCalculation(resultId);
+  const { history, attemptedHierarchies, scoreSummary, isLoading } = useResultCalculation(resultId);
 
   if (isLoading) return <Container py="xl">Loading...</Container>;
 
@@ -54,27 +52,16 @@ export const ResultPage: React.FC = () => {
       </Paper>
 
       {/* リスト表示セクション */}
-      {currentProblemList &&
-        currentProblemList.hierarchies.map((h) => (
-          <Box key={h.id} mb="xl">
-            <Divider label={h.name} labelPosition="left" mb="sm" />
-            <Stack gap={4}>
-              {h.unitVersionPaths.map((uid) => {
-                const unit = unitRecord[uid];
-                if (!unit) return null;
-                const range = problemNumberMap[h.id][unit.unitId];
-                return (
-                  <ResultRow
-                    key={uid}
-                    unit={unit}
-                    att={history?.unitAttempts[uid]}
-                    problemNumbers={range?.problemNumbers ?? []}
-                  />
-                );
-              })}
-            </Stack>
-          </Box>
-        ))}
+      {attemptedHierarchies.map((h) => (
+        <Box key={h.id} mb="xl">
+          <Divider label={h.name} labelPosition="left" mb="sm" />
+          <Stack gap={4}>
+            {h.unitVersionPaths.map((uid) => {
+              return <ResultRow key={uid} attempts={history?.unitAttempts[uid]} />;
+            })}
+          </Stack>
+        </Box>
+      ))}
 
       <Button
         fullWidth

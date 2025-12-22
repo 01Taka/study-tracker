@@ -1,3 +1,46 @@
+/** * ============================================================
+ * 1. 定数・共通型 (Enums & Utility Types)
+ * ============================================================
+ */
+
+/** 回答タイプ */
+export type AnswerType = 'MARK' | 'TEXT';
+
+/** 問題タイプ */
+export type ProblemType =
+  | 'SINGLE' // 単一回答
+  | 'ORDERED_SET' // 完答・順序固定
+  | 'UNORDERED' // 順不同・部分点あり
+  | 'UNORDERED_SET'; // 順不同・完答
+
+/** 自己評価タイプ (○, △, ✕) */
+export type SelfEvalType = 'CONFIDENT' | 'UNSURE' | 'NONE' | 'UNRATED';
+
+/** 判定結果のステータス */
+export type JudgeStatus = 'CORRECT' | 'WRONG';
+
+/** 自己評価と正誤判定の組み合わせ型 */
+export type SelfEvalResultKey = `${SelfEvalType}_${JudgeStatus}`;
+
+/** セッション開始時のフィルタリング条件 */
+export type StartSessionFilterType = 'all' | 'miss' | 'recommended';
+
+/** 拡張された問題範囲の定義 */
+export interface ProblemRange {
+  start: number;
+  end: number;
+  problemNumbers: number[];
+  count: number;
+  isSingle: boolean;
+}
+
+export type ProblemNumberResult = Record<string, Record<string, ProblemRange>>;
+
+/** * ============================================================
+ * 2. 階層構造定義 (Core Entities)
+ * ============================================================
+ */
+
 /** 階層1: 問題集 (Workbook) */
 export interface Workbook {
   id: string;
@@ -14,30 +57,23 @@ export interface ProblemList {
   hierarchies: UserDefinedHierarchy[]; // 問題定義配列
 }
 
-/** ユーザー定義階層 (大問・章など) */
+/** 階層3: ユーザー定義階層 (大問・章など) */
 export interface UserDefinedHierarchy {
   id: string; // 不変ID
   name: string; // 「第1章」「大問1」など
   unitVersionPaths: string[]; // ProblemUnit.unitId の配列
 }
 
-/** 回答タイプ */
-export type AnswerType = 'MARK' | 'TEXT';
-
-/** 問題タイプ */
-export type ProblemType =
-  | 'SINGLE' // 単一回答
-  | 'ORDERED_SET' // 完答・順序固定
-  | 'UNORDERED' // 順不同・部分点あり
-  | 'UNORDERED_SET'; // 順不同・完答
-
-/** 問題ユニット (ProblemUnit)
+/** 階層4: 問題ユニット (ProblemUnit)
  * ユニットはイミュータブルであり、編集時は新規IDが発行される
  */
 export interface ProblemUnit {
   unitId: string; // ユニットバージョンパスと同義
+  problemListId: string;
+  workbookId: string;
+  hierarchyId: string;
   question?: string; // オプショナル
-  answers: string[]; // 複数の回答を保持可能
+  problems: ProblemUnitProblem[];
   scoring: number; // 配点
   problemType: ProblemType;
   answerType: AnswerType;
@@ -45,37 +81,18 @@ export interface ProblemUnit {
   answerStructureId: string; // 回答構造の同一性を識別するID
 }
 
-export interface ProblemUnitSettings {
-  question?: string; // オプショナル
-  scoring: number; // 配点
-  problemType: ProblemType;
-  answerType: AnswerType;
+/** ユニット内の設問個票 */
+export interface ProblemUnitProblem {
+  problemNumber: number;
+  answer: string;
 }
 
-export interface ProblemUnitDataWithDraft extends ProblemUnitSettings {
-  answers: string[]; // 複数の回答を保持可能
-  answerDraft: string;
-}
-
-export interface ProblemUnitData extends ProblemUnitSettings {
-  answers: string[]; // 複数の回答を保持可能
-}
-
-/** 回答構造記録 (AnswerStructureRecord) */
-export interface AnswerStructureRecord {
-  [answerStructureId: string]: number; // key: ID, value: 作成日時
-}
-
-/** ユニットバージョン記録 (UnitVersionRecord)
- * 履歴追跡用
+/** * ============================================================
+ * 3. 学習履歴・回答データ (Attempt & Results)
+ * ============================================================
  */
-export interface UnitVersionRecord {
-  [unitVersionPath: string]: ProblemUnit;
-}
 
-export type SelfEvalType = 'CONFIDENT' | 'UNSURE' | 'NONE' | 'UNRATED'; // ○, △, ✕
-
-/** 回答履歴 (AttemptHistory) */
+/** 回答履歴のルート (AttemptHistory) */
 export interface AttemptHistory {
   id: string;
   workbookId: string;
@@ -86,45 +103,76 @@ export interface AttemptHistory {
   unitAttempts: UnitAttemptResult;
 }
 
+/** ユニットごとの結果マップ */
 export type UnitAttemptResult = {
   [unitId: string]: UnitAttemptResultData;
 };
 
+/** ユニットごとの具体的な回答内容と判定結果 */
 export type UnitAttemptResultData = {
-  results: Record<
-    string,
-    {
-      answer: string;
-      collectAnswer: string;
-      judge: JudgeStatus;
-    }
-  >;
+  results: UnitAttemptResultProblemData[];
   resultKey: SelfEvalResultKey;
   selfEval: SelfEvalType;
+  problemType: ProblemType;
+  scoring: number;
 };
 
+export type UnitAttemptResultProblemData = {
+  problemNumber: number; // keyと一致する
+  answer: string;
+  collectAnswer: string;
+  judge: JudgeStatus;
+};
+
+/** 日時情報を含む試行データ */
+export type UnitAttempt = UnitAttemptResultData & { attemptAt: number };
+
+/** ユーザーが入力中の回答データ */
 export type UnitAttemptUserAnswers = {
-  answers: Record<string, string>; // keyがindex, valueが回答
+  answers: Record<string, string>; // problemNumber, valueが回答
   selfEval: SelfEvalType;
 };
 
-export type StartSessionFilterType = 'all' | 'miss' | 'recommended';
+/** * ============================================================
+ * 4. セッション・管理・編集用 (Management & UI)
+ * ============================================================
+ */
 
-export interface ProblemRange {
-  start: number;
-  end: number;
-  problemNumbers: number[];
-  isError: boolean;
+/** 実行中の学習セッションデータ */
+export interface AttemptingSessionData {
+  id: string;
+  workbookId: string;
+  problemListId: string;
+  startTime: number;
+  problemListVersionId: string;
+  attemptingUnitIds: string[];
 }
 
-/** 判定結果のステータス */
-export type JudgeStatus = 'CORRECT' | 'WRONG';
+/** ユニットバージョン記録 (履歴追跡用) */
+export interface UnitVersionRecord {
+  [unitId: string]: ProblemUnit;
+}
 
-/** * 自己評価と正誤判定の組み合わせ型
- * 'CONFIDENT_CORRECT' | 'CONFIDENT_WRONG' | 'UNSURE_CORRECT' | ... と展開される
- */
-export type SelfEvalResultKey = `${SelfEvalType}_${JudgeStatus}`;
+/** 回答構造記録 (作成日管理) */
+export interface AnswerStructureRecord {
+  [answerStructureId: string]: number; // key: ID, value: 作成日時
+}
 
-export type ProblemNumberResult = Record<string, Record<string, ProblemRange>>;
+/** 編集用設定ベース */
+export interface ProblemUnitSettings {
+  question?: string;
+  scoring: number;
+  problemType: ProblemType;
+  answerType: AnswerType;
+}
 
-export type UnitAttempt = UnitAttemptResultData & { attemptAt: number };
+/** 編集用データ本体 */
+export interface ProblemUnitData extends ProblemUnitSettings {
+  answers: string[]; // 複数の回答を保持可能
+}
+
+/** 下書き状態を含む編集用データ */
+export interface ProblemUnitDataWithDraft extends ProblemUnitSettings {
+  answers: string[];
+  answerDraft: string;
+}
