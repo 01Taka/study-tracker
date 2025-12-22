@@ -1,7 +1,7 @@
 import { useCallback, useMemo } from 'react';
 import { useWorkbookData } from '@/features/data/hooks/useWorkbookData';
 import { generateId } from '@/shared/functions/generate-id';
-import { ProblemList } from '@/shared/types/app.types';
+import { ProblemList, UserDefinedHierarchy } from '@/shared/types/app.types';
 
 export const useProblemListData = (workbookId: string) => {
   const { workbooks, updateWorkbooks, reloadWorkbook } = useWorkbookData();
@@ -19,12 +19,18 @@ export const useProblemListData = (workbookId: string) => {
   }, [currentWorkbook]);
 
   const onCreateProblemList = useCallback(
-    (data: { name: string }) => {
+    (data: { name: string; defaultHierarchyName: string }) => {
+      const defaultHierarchy: UserDefinedHierarchy = {
+        id: generateId(),
+        name: data.defaultHierarchyName,
+        unitVersionPaths: [],
+      };
+
       const newProblemList: ProblemList = {
         id: generateId(),
         name: data.name,
         createdAt: Date.now(),
-        hierarchies: [],
+        hierarchies: [defaultHierarchy],
       };
 
       // 保存機能付きの updater を使用

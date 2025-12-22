@@ -1,14 +1,16 @@
 import { useState } from 'react';
 import { IconPlus } from '@tabler/icons-react';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { Affix, Box, Button, Transition } from '@mantine/core';
 import { useProblemListData } from '@/features/data/hooks/useProblemListData';
 import { TopNav } from '@/features/navigation/TopNav';
 import { CreateProblemListBottomSheet } from '@/features/problemList/components/CreateProblemListBottomSheet';
 import { ProblemListModal } from '@/features/problemList/components/modal/ProblemListModal';
 import { ProblemListsDisplay } from '@/features/problemList/components/ProblemListsDisplay';
+import { DEFAULT_HIERARCHY_NAME } from '@/features/problemList/constants/default-name';
 
 export function ProblemListPage() {
+  const navigate = useNavigate();
   const { workbookId } = useParams();
 
   // reloadWorkbook を取得
@@ -27,7 +29,7 @@ export function ProblemListPage() {
 
   return (
     <>
-      <TopNav title={workbookName || 'problemList'} />
+      <TopNav title={workbookName || 'problemList'} onBack={() => navigate('/')} />
 
       <Box p={'md'}>
         <ProblemListsDisplay
@@ -66,7 +68,7 @@ export function ProblemListPage() {
       <CreateProblemListBottomSheet
         opened={openedCreateModal}
         onClose={() => setOpenedCreateModal(false)}
-        onCreate={onCreate}
+        onCreate={({ name }) => onCreate({ name, defaultHierarchyName: DEFAULT_HIERARCHY_NAME })}
       />
     </>
   );

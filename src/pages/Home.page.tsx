@@ -1,22 +1,47 @@
 import { useState } from 'react';
-import { IconPlus } from '@tabler/icons-react'; // 追加
+import { IconFileExport, IconPlus } from '@tabler/icons-react'; // 追加
 
 import { useNavigate } from 'react-router-dom';
-import { Affix, Box, Button, Transition } from '@mantine/core'; // 追加
+import { ActionIcon, Affix, Box, Button, Transition } from '@mantine/core'; // 追加
 
+import { useProblemUnitData } from '@/features/data/hooks/useProblemUnitData';
 import { useWorkbookData } from '@/features/data/hooks/useWorkbookData';
+import { useWorkbookTransfer } from '@/features/data/hooks/useWorkbookTransfer';
 import { CreateWorkbookBottomSheet } from '@/features/home/components/CreateWorkbookBottomSheet';
+import { TransferModal } from '@/features/home/components/TransferModal';
 import { WorkbookList } from '@/features/home/components/WorkbookList';
 import { TopNav } from '@/features/navigation/TopNav';
 
 export function HomePage() {
   const navigate = useNavigate();
-  const { onCreate, workbooks } = useWorkbookData();
+  const { workbooks, updateWorkbooks, onCreate, reloadWorkbook } = useWorkbookData();
+  const { unitRecord, updateAndSaveRecord } = useProblemUnitData(reloadWorkbook);
+
+  const { exportWorkbooks, importWorkbooks } = useWorkbookTransfer(
+    workbooks,
+    unitRecord,
+    updateWorkbooks,
+    updateAndSaveRecord
+  );
+
   const [opened, setOpened] = useState(false);
+  const [openedTransferModal, setOpenedTransferModal] = useState(false);
 
   return (
     <>
-      <TopNav title="Home" />
+      <TopNav
+        title="Home"
+        rightSection={
+          <ActionIcon
+            variant="subtle"
+            color="gray"
+            onClick={() => setOpenedTransferModal(true)}
+            size="lg"
+          >
+            <IconFileExport size={24} />
+          </ActionIcon>
+        }
+      />
 
       <Box p={'md'}>
         <WorkbookList workbooks={workbooks} onClick={(id) => navigate(`${id}/problemList`)} />
@@ -42,6 +67,14 @@ export function HomePage() {
         opened={opened}
         onClose={() => setOpened(false)}
         onCreate={onCreate}
+      />
+
+      <TransferModal
+        opened={openedTransferModal}
+        workbooks={workbooks}
+        onClose={() => setOpenedTransferModal(false)}
+        onExport={exportWorkbooks}
+        onImport={importWorkbooks}
       />
     </>
   );

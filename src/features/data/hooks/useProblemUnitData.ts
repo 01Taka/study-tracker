@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { generateId } from '@/shared/functions/generate-id';
+import { findHierarchy } from '@/shared/functions/workbook-utils';
 import { ProblemUnit, ProblemUnitData, UnitVersionRecord } from '@/shared/types/app.types';
 import { useHierarchyData } from './useHierarchyData';
 
@@ -8,12 +9,9 @@ const UNITS_STORAGE_KEY = 'app_units_record';
 export const useProblemUnitData = (reloadWorkbook?: () => void) => {
   const [unitRecord, setUnitRecord] = useState<UnitVersionRecord>({});
 
-  // hierarchy側の操作関数（onAddUnitPathsはtargetIndexをサポート済みと想定）
-  const { onAddUnitPaths, onRemoveUnitPath, onReplaceUnitPath } = useHierarchyData(reloadWorkbook);
+  // onUpdateHierarchyPaths を使用するために取得
+  const { workbooks, onUpdateHierarchyPaths, onRemoveUnitPath } = useHierarchyData(reloadWorkbook);
 
-  /**
-   * ローカルストレージから最新状態を読み込み
-   */
   const reloadUnitRecord = useCallback(() => {
     const saved = localStorage.getItem(UNITS_STORAGE_KEY);
     if (saved) {
@@ -32,9 +30,6 @@ export const useProblemUnitData = (reloadWorkbook?: () => void) => {
     reloadUnitRecord();
   }, [reloadUnitRecord]);
 
-  /**
-   * 状態保存・永続化・リロード
-   */
   const updateAndSaveRecord = useCallback(
     (nextRecord: UnitVersionRecord) => {
       setUnitRecord(nextRecord);
@@ -48,9 +43,6 @@ export const useProblemUnitData = (reloadWorkbook?: () => void) => {
     [reloadWorkbook]
   );
 
-  /**
-   * 取得ユーティリティ
-   */
   const getProblemUnit = useCallback(
     (id: string | undefined) => (id ? unitRecord[id] || null : null),
     [unitRecord]
@@ -61,65 +53,38 @@ export const useProblemUnitData = (reloadWorkbook?: () => void) => {
       return paths
         .map((path) => unitRecord[path])
         .filter((unit): unit is ProblemUnit => {
-          // 1. まずユニットが存在するかチェック
           if (!unit) return false;
-          // 2. フィルター配列がない場合はすべて通す
           if (!filterIds) return true;
-          // 3. フィルター配列がある場合は、含まれているかチェック
           return filterIds.includes(unit.unitId);
         });
     },
     [unitRecord]
   );
 
-  const getProblemUnitsByIds = useCallback(
-    (
-      workbookId: string,
-      problemListId: string,
-      hierarchyId: string,
-      units: ProblemUnit[] = Object.values(unitRecord)
-    ): ProblemUnit[] => {
-      return units.filter(
-        (unit) =>
-          unit.problemListId === problemListId &&
-          unit.workbookId === workbookId &&
-          unit.hierarchyId === hierarchyId
-      );
-    },
-    [unitRecord]
-  );
+  // --------------------------------------------------------
+  // コアロジック: リインデックスと一括保存
+  // --------------------------------------------------------
 
   /**
-   * 共通処理: 特定階層の全ユニットの problemNumber を1から振り直す
-   * 既存の sortedUnits の各ユニットを走査し、番号が変わるものは新IDで保存し、パスを置換する
+   * 仮想的なユニットリストを受け取り、問題番号を1から振り直して保存する共通処理
+   * 階層へのパス反映もここから呼び出し元へ返す情報を元に行います。
    */
-  const reindexHierarchyUnits = useCallback(
-    (
-      workbookId: string,
-      problemListId: string,
-      hierarchyId: string,
-      currentRecord: UnitVersionRecord,
-      additionalUnits: { index: number; units: ProblemUnit[] } = { index: 0, units: [] }
-    ) => {
-      const nextRecord = { ...currentRecord };
-
-      // 1. 現在のユニットを番号順に取得
-      const existingSortedUnits = getProblemUnitsByIds(workbookId, problemListId, hierarchyId).sort(
-        (a, b) => (a.problems[0]?.problemNumber || 0) - (b.problems[0]?.problemNumber || 0)
-      );
-
-      // 2. 新規ユニットを指定位置に挿入した仮想的な全リストを作成
-      const combinedUnits = [...existingSortedUnits];
-      combinedUnits.splice(additionalUnits.index, 0, ...additionalUnits.units);
-
+  const processAndReindexUnits = useCallback(
+    (virtualUnits: ProblemUnit[]) => {
+      const nextRecord = { ...unitRecord };
       let currentNum = 1;
-      const finalNewUnitIds: string[] = []; // 新規追加されたユニットの新しいID群
 
-      combinedUnits.forEach((unit) => {
-        const isNewlyAdded = additionalUnits.units.includes(unit);
+      // 結果追跡用
+      const newPathsSequence: string[] = []; // 最終的な並び順のIDリスト
+      const newlyGeneratedIds: string[] = []; // 今回新規発行されたID
 
-        // 番号がずれている、または新規追加されたユニットの場合は新バージョンを発行
-        const needsNewVersion = isNewlyAdded || unit.problems[0]?.problemNumber !== currentNum;
+      virtualUnits.forEach((unit) => {
+        const isNewEntry = !unit.unitId; // unitIdが空なら新規追加行
+
+        // 再計算が必要か判定
+        // 1. 新規追加行である
+        // 2. 現在の問題番号開始位置と、ユニットの番号がずれている
+        const needsNewVersion = isNewEntry || unit.problems[0]?.problemNumber !== currentNum;
 
         if (needsNewVersion) {
           const newId = generateId();
@@ -128,32 +93,37 @@ export const useProblemUnitData = (reloadWorkbook?: () => void) => {
             unitId: newId,
             problems: unit.problems.map((p) => ({
               ...p,
-              problemNumber: currentNum++,
+              problemNumber: currentNum++, // 連番付与
             })),
           };
 
           nextRecord[newId] = updatedUnit;
-
-          if (isNewlyAdded) {
-            finalNewUnitIds.push(newId);
-          } else {
-            // 既存ユニットのIDが変わった場合は、階層側のパスを置換
-            onReplaceUnitPath(workbookId, problemListId, hierarchyId, unit.unitId, newId);
-          }
+          newPathsSequence.push(newId);
+          newlyGeneratedIds.push(newId);
         } else {
-          // 番号が変わらない既存ユニット
+          // 変更なし（番号も合致している）
+          newPathsSequence.push(unit.unitId);
           currentNum += unit.problems.length;
         }
       });
 
+      // LocalStorage更新
       updateAndSaveRecord(nextRecord);
-      return finalNewUnitIds;
+
+      return {
+        newPathsSequence,
+        newlyGeneratedIds,
+      };
     },
-    [getProblemUnitsByIds, onReplaceUnitPath, updateAndSaveRecord]
+    [unitRecord, updateAndSaveRecord]
   );
 
+  // --------------------------------------------------------
+  // 操作アクション
+  // --------------------------------------------------------
+
   /**
-   * 2. Unit一括追加
+   * Unit一括追加
    */
   const insertUnitsToHierarchy = useCallback(
     ({
@@ -169,83 +139,116 @@ export const useProblemUnitData = (reloadWorkbook?: () => void) => {
       dataList: ProblemUnitData[];
       index?: number;
     }) => {
-      // 既存ユニットのリストを取得して挿入位置を確定
-      const sameHierarchyUnits = getProblemUnitsByIds(workbookId, problemListId, hierarchyId).sort(
-        (a, b) => (a.problems[0]?.problemNumber || 0) - (b.problems[0]?.problemNumber || 0)
-      );
-      const targetIndex = index ?? sameHierarchyUnits.length;
+      const hierarchy = findHierarchy(workbooks, workbookId, problemListId, hierarchyId);
+      if (!hierarchy) return [];
 
-      // 追加するユニットの雛形（IDや番号は reindex 内で確定させる）
-      const newUnitsToInsert = dataList.map(
-        (data) =>
-          ({
-            ...data,
-            unitId: '', // placeholder
-            workbookId,
-            problemListId,
-            hierarchyId,
-            lastAttemptedAt: 0,
-            answerStructureId: generateId(),
-            problems: data.answers.map((ans) => ({ problemNumber: 0, answer: ans })),
-          }) as ProblemUnit
-      );
+      // 1. 現在の並び順でユニットを展開
+      const currentOrderedUnits = hierarchy.unitVersionPaths
+        .map((pathId) => unitRecord[pathId])
+        .filter((u): u is ProblemUnit => !!u);
 
-      // 共通リマッピング処理を実行
-      const newPathIds = reindexHierarchyUnits(workbookId, problemListId, hierarchyId, unitRecord, {
-        index: targetIndex,
-        units: newUnitsToInsert,
+      // 2. 挿入用データ作成 (IDは空文字)
+      const newUnitsToInsert = dataList.map((data) => {
+        const { answers, question, scoring, problemType, answerType } = data;
+        return {
+          answers,
+          question,
+          scoring,
+          problemType,
+          answerType,
+          unitId: '', // processAndReindexUnitsで生成
+          workbookId,
+          problemListId,
+          hierarchyId,
+          lastAttemptedAt: 0,
+          answerStructureId: generateId(),
+          problems: data.answers.map((ans) => ({ problemNumber: 0, answer: ans })),
+        } as ProblemUnit;
       });
 
-      // 階層側にパスを追加
-      onAddUnitPaths(workbookId, problemListId, hierarchyId, newPathIds, targetIndex);
+      // 3. 配列に挿入
+      const targetIndex = index ?? currentOrderedUnits.length;
+      const virtualUnits = [...currentOrderedUnits];
+      virtualUnits.splice(targetIndex, 0, ...newUnitsToInsert);
 
-      return newPathIds;
+      // 4. 再計算 (Local Storage更新は内部で行われる)
+      const { newPathsSequence, newlyGeneratedIds } = processAndReindexUnits(virtualUnits);
+
+      // 5. Hierarchyへの反映: パス配列を一括置換
+      onUpdateHierarchyPaths(workbookId, problemListId, hierarchyId, newPathsSequence);
+
+      return newlyGeneratedIds;
     },
-    [unitRecord, getProblemUnitsByIds, reindexHierarchyUnits, onAddUnitPaths]
+    [workbooks, unitRecord, processAndReindexUnits, onUpdateHierarchyPaths]
   );
 
   /**
-   * 4. Unit編集
+   * Unit編集
    */
   const updateUnit = useCallback(
     (unitId: string, newData: ProblemUnitData) => {
       const currentUnit = unitRecord[unitId];
       if (!currentUnit) return;
 
+      const { workbookId, problemListId, hierarchyId } = currentUnit;
+      const hierarchy = findHierarchy(workbooks, workbookId, problemListId, hierarchyId);
+      if (!hierarchy) return;
+
+      // 1. 変更があるかどうかの厳密なチェック（早期リターン用）
       const isAnswerUnchanged =
         currentUnit.problems.length === newData.answers.length &&
         currentUnit.problems.every((p, i) => p.answer === newData.answers[i]);
 
+      const isSettingsUnchanged =
+        currentUnit.question === newData.question &&
+        currentUnit.scoring === newData.scoring &&
+        currentUnit.problemType === newData.problemType &&
+        currentUnit.answerType === newData.answerType;
+
+      // 値が全く変わっていない場合は、何もしない
+      if (isAnswerUnchanged && isSettingsUnchanged) {
+        return [];
+      }
+
+      // 2. 回答構造IDの判定 (回答内容が変わった場合のみ新しいIDを発行)
       const structureId = isAnswerUnchanged ? currentUnit.answerStructureId : generateId();
 
-      // 更新後のデータを持つ仮オブジェクトを作成（IDなし）
-      const updatedUnitBase: ProblemUnit = {
-        ...currentUnit,
-        ...newData,
-        lastAttemptedAt: 0,
-        answerStructureId: structureId,
-        problems: newData.answers.map((ans) => ({
-          problemNumber: 0, // placeholder
-          answer: ans,
-        })),
-      };
+      // 3. 仮想リスト作成 (対象のみ置換)
+      const virtualUnits = hierarchy.unitVersionPaths
+        .map((pathId) => {
+          const unit = unitRecord[pathId];
+          if (!unit) return null;
 
-      // 既存レコードの中で対象の unitId を持つものを一時的に置換した状態で reindex を走らせる
-      // 実際には update される unit も reindex の過程で new ID になる
-      const nextRecordPreUpdate = { ...unitRecord, [unitId]: updatedUnitBase };
+          if (pathId === unitId) {
+            return {
+              ...unit,
+              ...newData,
+              lastAttemptedAt: 0, // 値が変わったので最終取組日時をリセット
+              answerStructureId: structureId,
+              problems: newData.answers.map((ans) => ({
+                problemNumber: 0, // processAndReindexUnits内で決定
+                answer: ans,
+              })),
+            } as ProblemUnit;
+          }
+          return unit;
+        })
+        .filter((u): u is ProblemUnit => !!u);
 
-      return reindexHierarchyUnits(
-        currentUnit.workbookId,
-        currentUnit.problemListId,
-        currentUnit.hierarchyId,
-        nextRecordPreUpdate
-      );
+      // 4. 再計算と一括保存
+      const { newPathsSequence, newlyGeneratedIds } = processAndReindexUnits(virtualUnits);
+
+      // 5. Hierarchyへの反映
+      onUpdateHierarchyPaths(workbookId, problemListId, hierarchyId, newPathsSequence);
+
+      return newlyGeneratedIds;
     },
-    [unitRecord, reindexHierarchyUnits]
+    [workbooks, unitRecord, processAndReindexUnits, onUpdateHierarchyPaths]
   );
 
   return {
     unitRecord,
+    updateAndSaveRecord,
     reloadUnitRecord,
     getProblemUnit,
     getProblemUnits,

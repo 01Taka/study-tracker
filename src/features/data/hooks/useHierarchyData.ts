@@ -4,11 +4,8 @@ import { generateId } from '@/shared/functions/generate-id';
 import { UserDefinedHierarchy } from '@/shared/types/app.types';
 
 export const useHierarchyData = (reloadWorkbook?: () => void) => {
-  const { updateWorkbooks } = useWorkbookData();
+  const { workbooks, updateWorkbooks } = useWorkbookData();
 
-  /**
-   * 1. 新しい空のUserDefinedHierarchyを作成する
-   */
   const onCreateHierarchy = useCallback(
     (workbookId: string, problemListId: string, data: { name: string }) => {
       const newHierarchy: UserDefinedHierarchy = {
@@ -16,7 +13,6 @@ export const useHierarchyData = (reloadWorkbook?: () => void) => {
         name: data.name,
         unitVersionPaths: [],
       };
-
       updateWorkbooks((prevWorkbooks) =>
         prevWorkbooks.map((wb) => {
           if (wb.id !== workbookId) return wb;
@@ -32,15 +28,11 @@ export const useHierarchyData = (reloadWorkbook?: () => void) => {
           };
         })
       );
-      // 更新後にリロードを実行
       reloadWorkbook?.();
     },
     [updateWorkbooks, reloadWorkbook]
   );
 
-  /**
-   * 2. 特定のIdのヒエラルキーを削除する
-   */
   const onDeleteHierarchy = useCallback(
     (workbookId: string, problemListId: string, hierarchyId: string) => {
       updateWorkbooks((prevWorkbooks) =>
@@ -63,10 +55,9 @@ export const useHierarchyData = (reloadWorkbook?: () => void) => {
     [updateWorkbooks, reloadWorkbook]
   );
 
-  /**
-   * 3. ヒエラルキーのunitVersionPathsを一括追加する
-   * targetIndex が指定された場合はその位置に挿入し、指定がない場合は末尾に追加する
-   */
+  // ... (onAddUnitPaths, onReplaceUnitPath, onRemoveUnitPath もそのまま残してOKですが、
+  //      一括更新があれば使用頻度は下がります) ...
+
   const onAddUnitPaths = useCallback(
     (
       workbookId: string,
@@ -86,21 +77,13 @@ export const useHierarchyData = (reloadWorkbook?: () => void) => {
                 ...pl,
                 hierarchies: pl.hierarchies.map((h) => {
                   if (h.id !== hierarchyId) return h;
-
-                  // 挿入位置の決定
                   const index = targetIndex ?? h.unitVersionPaths.length;
-
-                  // 指定位置に新しいパスを挿入した新しい配列を作成
                   const nextPaths = [
                     ...h.unitVersionPaths.slice(0, index),
                     ...unitVersionPaths,
                     ...h.unitVersionPaths.slice(index),
                   ];
-
-                  return {
-                    ...h,
-                    unitVersionPaths: nextPaths,
-                  };
+                  return { ...h, unitVersionPaths: nextPaths };
                 }),
               };
             }),
@@ -112,9 +95,6 @@ export const useHierarchyData = (reloadWorkbook?: () => void) => {
     [updateWorkbooks, reloadWorkbook]
   );
 
-  /**
-   * 4. unitVersionPathsに含まれる特定のパスを新しいパスに置換する
-   */
   const onReplaceUnitPath = useCallback(
     (
       workbookId: string,
@@ -151,9 +131,6 @@ export const useHierarchyData = (reloadWorkbook?: () => void) => {
     [updateWorkbooks, reloadWorkbook]
   );
 
-  /**
-   * 5. unitVersionPathsに含まれる特定のパスを削除する
-   */
   const onRemoveUnitPath = useCallback(
     (workbookId: string, problemListId: string, hierarchyId: string, targetPath: string) => {
       updateWorkbooks((prevWorkbooks) =>
@@ -182,11 +159,45 @@ export const useHierarchyData = (reloadWorkbook?: () => void) => {
     [updateWorkbooks, reloadWorkbook]
   );
 
+  /**
+   * 6. 階層内のパス配列を完全に置き換える (一括更新用)
+   * insertやupdate時のRe-index処理後に、計算済みの全パスを一発で反映させるために使用します。
+   */
+  const onUpdateHierarchyPaths = useCallback(
+    (workbookId: string, problemListId: string, hierarchyId: string, newPaths: string[]) => {
+      updateWorkbooks((prevWorkbooks) =>
+        prevWorkbooks.map((wb) => {
+          if (wb.id !== workbookId) return wb;
+          return {
+            ...wb,
+            problemLists: wb.problemLists.map((pl) => {
+              if (pl.id !== problemListId) return pl;
+              return {
+                ...pl,
+                hierarchies: pl.hierarchies.map((h) => {
+                  if (h.id !== hierarchyId) return h;
+                  return {
+                    ...h,
+                    unitVersionPaths: newPaths, // 配列を丸ごと置換
+                  };
+                }),
+              };
+            }),
+          };
+        })
+      );
+      reloadWorkbook?.();
+    },
+    [updateWorkbooks, reloadWorkbook]
+  );
+
   return {
+    workbooks,
     onCreateHierarchy,
     onDeleteHierarchy,
     onAddUnitPaths,
     onReplaceUnitPath,
     onRemoveUnitPath,
+    onUpdateHierarchyPaths,
   };
 };
