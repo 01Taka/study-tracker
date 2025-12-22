@@ -98,6 +98,17 @@ export const EditTab = ({
     }
   };
 
+  const handleAddUnits = (dataList: ProblemUnitData[]) => {
+    if (!currentHierarchy) return;
+
+    insertUnitsToHierarchy({
+      workbookId,
+      problemListId,
+      hierarchyId: currentHierarchy.id,
+      dataList,
+    });
+  };
+
   return (
     <Stack style={{ position: 'fixed', top: 130, bottom: 0, right: 0, left: 0 }} gap={0}>
       {/* 1. Hierarchy Tabs */}
@@ -213,23 +224,12 @@ export const EditTab = ({
         onSave={(d) => editingUnit && currentHierarchy && updateUnit(editingUnit.unitId, d)}
       />
 
-      <UnitBulkEditor opened={bulkAddOpened} onClose={closeBulkAdd} />
-
-      {/* <BulkAddModal
+      <UnitBulkEditor
         opened={bulkAddOpened}
         onClose={closeBulkAdd}
-        baseProblemIndex={totalProblemsCount}
-        onAdd={(units) =>
-          currentHierarchy &&
-          insertUnitsToHierarchy({
-            workbookId,
-            problemListId,
-            hierarchyId: currentHierarchy.id,
-            dataList: units,
-            index: undefined,
-          })
-        }
-      /> */}
+        onSubmit={handleAddUnits}
+        startProblemNumber={totalProblemsCount + 1}
+      />
     </Stack>
   );
 };

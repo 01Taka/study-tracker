@@ -20,7 +20,6 @@ import {
   PROBLEM_TYPE_SELECTIONS,
 } from '@/features/problemList/constants/form-constants';
 import { useKeyboardInput } from '@/features/problemList/hooks/useKeyboardInput';
-import { useScoreKeyboardInput } from '@/features/problemList/hooks/useScoreKeyboardInput';
 import { UnitBulkAddFormUnit, UnitBulkAddFormValues } from '@/features/problemList/types/types';
 import { MARK_SELECTIONS } from '@/shared/constants/mark-selections';
 
@@ -59,6 +58,7 @@ export const DraftOverlay = ({
 
   useKeyboardInput({
     active: opened,
+    digitType: 1,
     handleMarkSelect,
     handleScoringSelect: (scoring) => {
       form.setFieldValue('unitSetting.scoring', scoring);

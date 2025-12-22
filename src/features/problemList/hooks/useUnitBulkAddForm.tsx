@@ -141,6 +141,14 @@ export const useUnitBulkAddForm = () => {
     [form]
   );
 
+  // --- 完全に状態をリセットする ---
+  const resetAll = useCallback(() => {
+    // 1. フォームの状態を initialValues に戻す
+    form.reset();
+    // 2. スナップショット（Ref）をクリアする
+    snapshotRef.current = null;
+  }, [form]);
+
   return {
     form,
     commitDraft,
@@ -154,5 +162,6 @@ export const useUnitBulkAddForm = () => {
     captureSnapshot,
     revertToSnapshot,
     clearSnapshot,
+    resetAll,
   };
 };

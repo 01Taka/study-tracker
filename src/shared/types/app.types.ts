@@ -167,9 +167,9 @@ export interface ProblemUnitSettings {
 }
 
 /** 編集用データ本体 */
-export interface ProblemUnitData extends ProblemUnitSettings {
+export type ProblemUnitData = ProblemUnitSettings & {
   answers: string[]; // 複数の回答を保持可能
-}
+};
 
 /** 下書き状態を含む編集用データ */
 export interface ProblemUnitDataWithDraft extends ProblemUnitSettings {

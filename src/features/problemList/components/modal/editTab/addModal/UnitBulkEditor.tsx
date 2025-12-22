@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
   closestCenter,
   DndContext,
@@ -14,19 +14,23 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { IconArrowsSort, IconDeviceFloppy, IconGitMerge } from '@tabler/icons-react';
-import { Box, Button, Flex, Group, Modal, ScrollArea, Stack, Text, Tooltip } from '@mantine/core';
+import { Box, Button, Group, Modal, ScrollArea, Stack, Text, Tooltip } from '@mantine/core';
 import { useUnitBulkAddForm } from '@/features/problemList/hooks/useUnitBulkAddForm';
 import { useUnitMerge } from '@/features/problemList/hooks/useUnitManager';
+import { convertToProblemRanges } from '@/shared/functions/unit-utils';
+import { ProblemUnitData } from '@/shared/types/app.types';
 import { DraftOverlay } from './DraftOverlay';
 import { UnitCard } from './UnitCard';
 import { UnitCardStatic } from './UnitCardStatic'; // 追加
 
 interface Props {
   opened: boolean;
+  startProblemNumber: number;
   onClose: () => void;
+  onSubmit: (dataList: ProblemUnitData[]) => void;
 }
 
-export const UnitBulkEditor = ({ opened, onClose }: Props) => {
+export const UnitBulkEditor = ({ opened, startProblemNumber, onClose, onSubmit }: Props) => {
   const {
     form,
     commitDraft,
@@ -40,7 +44,12 @@ export const UnitBulkEditor = ({ opened, onClose }: Props) => {
     captureSnapshot,
     revertToSnapshot,
     clearSnapshot,
+    resetAll,
   } = useUnitBulkAddForm();
+
+  const ranges = useMemo(() => {
+    return convertToProblemRanges(form.values.units, startProblemNumber);
+  }, [form.values.units, startProblemNumber]);
 
   const totalScore = useMemo(() => {
     return form.values.units.reduce((acc, unit) => acc + unit.scoring, 0);
@@ -65,6 +74,19 @@ export const UnitBulkEditor = ({ opened, onClose }: Props) => {
   );
 
   // --- Handlers ---
+
+  const handleSubmit = useCallback(() => {
+    const units = form.values.units;
+    if (units.length === 0) return;
+    onSubmit(units);
+    resetAll();
+    onClose();
+  }, [form.values.units, onSubmit, resetAll, onClose]);
+
+  const handleCancel = useCallback(() => {
+    resetAll();
+    onClose();
+  }, [resetAll, onClose]);
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
@@ -97,7 +119,7 @@ export const UnitBulkEditor = ({ opened, onClose }: Props) => {
   return (
     <Modal
       opened={opened}
-      onClose={onClose}
+      onClose={handleCancel}
       fullScreen
       title="Unit Editor"
       styles={{
@@ -175,8 +197,8 @@ export const UnitBulkEditor = ({ opened, onClose }: Props) => {
           )}
 
           {!isDndMode && !isMergeMode && (
-            <Button color="green" onClick={onClose}>
-              Finish
+            <Button color="green" onClick={handleSubmit}>
+              Enter
             </Button>
           )}
         </Group>
@@ -202,6 +224,7 @@ export const UnitBulkEditor = ({ opened, onClose }: Props) => {
                     <UnitCardStatic
                       key={unit.id}
                       unit={unit}
+                      range={ranges[idx]}
                       index={idx}
                       isMergeMode={isMergeMode}
                       isSelectedForMerge={selectedMap[idx]}
@@ -218,6 +241,7 @@ export const UnitBulkEditor = ({ opened, onClose }: Props) => {
                     <UnitCard
                       key={unit.id}
                       unit={unit}
+                      range={ranges[idx]}
                       index={idx}
                       removeUnit={removeUnit}
                       updateUnitFields={updateUnitFields}

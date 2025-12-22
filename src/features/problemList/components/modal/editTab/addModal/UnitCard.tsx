@@ -10,6 +10,7 @@ import {
   SegmentedControl,
   Select,
   Stack,
+  Text,
   TextInput,
 } from '@mantine/core';
 import {
@@ -18,7 +19,7 @@ import {
 } from '@/features/problemList/constants/form-constants';
 import { UnitBulkAddFormUnit, UnitCardProps } from '@/features/problemList/types/types';
 import { MARK_SELECTIONS } from '@/shared/constants/mark-selections';
-import { AnswerType, ProblemType } from '@/shared/types/app.types';
+import { AnswerType, ProblemRange, ProblemType } from '@/shared/types/app.types';
 
 const AnswerList = memo(
   ({
@@ -26,49 +27,58 @@ const AnswerList = memo(
     index,
     updateUnitAnswer,
     removeAnswer,
+    range,
   }: {
     unit: UnitBulkAddFormUnit;
     index: number;
     updateUnitAnswer: (uIdx: number, aIdx: number, val: string) => void;
     removeAnswer: (uIdx: number, aIdx: number) => void;
+    range?: ProblemRange;
   }) => {
     // SINGLEタイプの場合は、最初の1つだけを表示対象とする
-    const displayAnswers =
-      unit.problemType === 'SINGLE'
-        ? [unit.answers[0] ?? ''] // 万が一空の場合でも1つ入力欄を出す
-        : unit.answers;
+    const displayAnswers = unit.problemType === 'SINGLE' ? [unit.answers[0] ?? ''] : unit.answers;
 
     return (
       <Stack gap="xs" mt="md">
-        {displayAnswers.map((ans: string, aIdx: number) => (
-          <Group key={`${unit.id}-ans-${aIdx}`} wrap="nowrap">
-            {unit.answerType === 'MARK' ? (
-              <SegmentedControl
-                color="blue"
-                data={MARK_SELECTIONS}
-                value={ans}
-                onChange={(v) => updateUnitAnswer(index, aIdx, v)}
-                size="xs"
-                flex={1}
-                fullWidth
-              />
-            ) : (
-              <TextInput
-                placeholder="解答を入力"
-                value={ans}
-                onChange={(e) => updateUnitAnswer(index, aIdx, e.currentTarget.value)}
-                style={{ flex: 1 }}
-              />
-            )}
+        {displayAnswers.map((ans: string, aIdx: number) => {
+          // 問題番号の取得 (rangeがある場合は配列から、ない場合はフォールバック)
+          const problemNo = range?.problemNumbers?.[aIdx];
 
-            {/* SINGLEではなく、かつ2つ以上解答がある場合のみ削除ボタンを表示 */}
-            {unit.problemType !== 'SINGLE' && unit.answers.length > 1 && (
-              <ActionIcon color="red" variant="subtle" onClick={() => removeAnswer(index, aIdx)}>
-                <IconTrash size={14} />
-              </ActionIcon>
-            )}
-          </Group>
-        ))}
+          return (
+            <Group key={`${unit.id}-ans-${aIdx}`} wrap="nowrap" align="center">
+              {/* 問題番号のラベル表示 */}
+              <Text size="sm" fw={700} style={{ minWidth: '2rem' }}>
+                {problemNo ? `問${problemNo}` : `解答${aIdx + 1}`}
+              </Text>
+
+              {unit.answerType === 'MARK' ? (
+                <SegmentedControl
+                  color="blue"
+                  data={MARK_SELECTIONS}
+                  value={ans}
+                  onChange={(v) => updateUnitAnswer(index, aIdx, v)}
+                  size="xs"
+                  flex={1}
+                  fullWidth
+                />
+              ) : (
+                <TextInput
+                  placeholder="解答を入力"
+                  value={ans}
+                  onChange={(e) => updateUnitAnswer(index, aIdx, e.currentTarget.value)}
+                  style={{ flex: 1 }}
+                />
+              )}
+
+              {/* SINGLEではなく、かつ2つ以上解答がある場合のみ削除ボタンを表示 */}
+              {unit.problemType !== 'SINGLE' && unit.answers.length > 1 && (
+                <ActionIcon color="red" variant="subtle" onClick={() => removeAnswer(index, aIdx)}>
+                  <IconTrash size={14} />
+                </ActionIcon>
+              )}
+            </Group>
+          );
+        })}
       </Stack>
     );
   }
@@ -236,6 +246,7 @@ const HeaderSettings = memo(
 export const UnitCard = memo(
   ({
     unit,
+    range,
     index,
     removeUnit,
     updateUnitFields,
@@ -262,6 +273,7 @@ export const UnitCard = memo(
           index={index}
           updateUnitAnswer={updateUnitAnswer}
           removeAnswer={removeAnswer}
+          range={range}
         />
         {unit.problemType !== 'SINGLE' && (
           <InternalDraft
@@ -288,7 +300,8 @@ export const UnitCard = memo(
       prev.unit.scoring === next.unit.scoring &&
       prev.unit.answerType === next.unit.answerType &&
       prev.unit.problemType === next.unit.problemType &&
-      JSON.stringify(prev.unit.answers) === JSON.stringify(next.unit.answers)
+      JSON.stringify(prev.unit.answers) === JSON.stringify(next.unit.answers) &&
+      JSON.stringify(prev.range) === JSON.stringify(next.range)
     );
   }
 );

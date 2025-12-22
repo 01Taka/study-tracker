@@ -1,4 +1,4 @@
-import { AnswerType, ProblemType } from '@/shared/types/app.types';
+import { AnswerType, ProblemRange, ProblemType } from '@/shared/types/app.types';
 
 // 型定義（変更なし部分は省略、FormValues等は既存準拠）
 export interface UnitBulkAddFormUnit {
@@ -28,6 +28,7 @@ export interface UnitBulkAddFormValues {
 // Extended props for the form components
 export interface UnitCardProps {
   unit: UnitBulkAddFormUnit; // FormUnit from your code
+  range: ProblemRange;
   index: number;
   isMergeMode: boolean;
   isSelectedForMerge: boolean;
