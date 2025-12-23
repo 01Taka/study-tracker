@@ -52,7 +52,7 @@ export const EditTab = ({
 }: EditTabProps) => {
   // State
   const [activeTab, setActiveTab] = useState<string | null>(
-    hierarchies.length > 0 ? hierarchies[0].id : null
+    hierarchies.length > 0 ? hierarchies[0].hierarchyId : null
   );
 
   // Modals
@@ -66,13 +66,13 @@ export const EditTab = ({
 
   // Derived State
   const currentHierarchy = useMemo(
-    () => hierarchies.find((h) => h.id === activeTab),
+    () => hierarchies.find((h) => h.hierarchyId === activeTab),
     [hierarchies, activeTab]
   );
 
   const currentUnits = useMemo(() => {
     if (!currentHierarchy) return [];
-    return getProblemUnits(currentHierarchy.unitVersionPaths);
+    return getProblemUnits(currentHierarchy.unitAchieveIds);
   }, [currentHierarchy, getProblemUnits]);
 
   // Total Answer Count Calculation (for base index)
@@ -94,7 +94,7 @@ export const EditTab = ({
   const handleDeleteUnit = (unit: ProblemUnit) => {
     if (!currentHierarchy) return;
     if (confirm('削除しますか？')) {
-      removeUnitFromHierarchy(workbookId, problemListId, currentHierarchy.id, unit.unitId);
+      removeUnitFromHierarchy(workbookId, problemListId, currentHierarchy.hierarchyId, unit.unitId);
     }
   };
 
@@ -104,7 +104,7 @@ export const EditTab = ({
     insertUnitsToHierarchy({
       workbookId,
       problemListId,
-      hierarchyId: currentHierarchy.id,
+      hierarchyId: currentHierarchy.hierarchyId,
       dataList,
     });
   };
@@ -118,7 +118,7 @@ export const EditTab = ({
             <Tabs value={activeTab} onChange={setActiveTab} variant="pills">
               <Tabs.List style={{ flexWrap: 'nowrap', position: 'relative', alignItems: 'center' }}>
                 {hierarchies.map((h) => (
-                  <Tabs.Tab key={h.id} value={h.id} pr="xs">
+                  <Tabs.Tab key={h.hierarchyId} value={h.hierarchyId} pr="xs">
                     <Group gap="xs" wrap="nowrap">
                       <Text>{h.name}</Text>
                       <ActionIcon

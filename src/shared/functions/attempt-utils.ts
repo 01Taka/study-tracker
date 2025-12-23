@@ -1,12 +1,23 @@
-import { AttemptHistory, ProblemList, UnitAttempt } from '../types/app.types';
+import {
+  AttemptHistory,
+  HierarchyArchiveRecord,
+  ProblemList,
+  UnitAttempt,
+} from '../types/app.types';
 
-export const getLatestAttemptMap = (problemList: ProblemList, histories: AttemptHistory[]) => {
+export const getLatestAttemptMap = (
+  problemList: ProblemList,
+  histories: AttemptHistory[],
+  hierarchyRecord: HierarchyArchiveRecord
+) => {
   // 1. 対象の problemListId に絞り込み、新しい順（降順）に並び替え
   const filteredSortedHistories = histories
     .filter((h) => h.problemListId === problemList.id)
     .sort((a, b) => b.startTime - a.startTime); // 新しい順
 
-  const unitPaths = problemList.hierarchies.flatMap((h) => h.unitVersionPaths);
+  const unitPaths = problemList.currentHierarchyAchieveIds.flatMap(
+    (id) => hierarchyRecord[id]?.unitAchieveIds ?? []
+  );
   const latestAttemptMap: Record<string, UnitAttempt | null> = {};
 
   // 2. unitPaths をキーとして初期化

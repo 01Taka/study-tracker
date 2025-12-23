@@ -17,7 +17,6 @@ import { useAttemptHistory } from '@/features/data/hooks/useAttemptHistory';
 import { useHierarchyData } from '@/features/data/hooks/useHierarchyData';
 import { useProblemUnitData } from '@/features/data/hooks/useProblemUnitData';
 import { getLatestAttemptMap } from '@/shared/functions/attempt-utils';
-import { safeArrayToRecord } from '@/shared/functions/object-utils';
 import { useUnitSelection } from '@/shared/hooks/useUnitSelection';
 import { ProblemList, StartSessionFilterType, Workbook } from '@/shared/types/app.types';
 import { AnalysisTab } from './analysisTab/AnalysisTab';
@@ -41,7 +40,8 @@ export const ProblemListModal: React.FC<ProblemListModalProps> = ({
 }) => {
   const navigate = useNavigate();
 
-  const { onCreateHierarchy, onDeleteHierarchy } = useHierarchyData(reloadWorkbook);
+  const { hierarchyRecord, onCreateHierarchy, onDeleteHierarchy } =
+    useHierarchyData(reloadWorkbook);
 
   const {
     unitRecord,
@@ -54,21 +54,17 @@ export const ProblemListModal: React.FC<ProblemListModalProps> = ({
   const { isSessionActive, startSession, cancelSession, getHistoriesByWorkbookId } =
     useAttemptHistory();
 
-  const hierarchiesMap = useMemo(() => {
-    return problemList?.hierarchies ? safeArrayToRecord(problemList.hierarchies, 'id') : {};
-  }, [problemList?.hierarchies]);
-
   const unitsMapByHierarchy = useMemo(
     () =>
       problemList
         ? Object.fromEntries(
-            problemList.hierarchies.map((hierarchy) => [
-              hierarchy.id,
-              hierarchy.unitVersionPaths.map((path) => unitRecord[path]),
+            problemList.currentHierarchyAchieveIds.map((id) => [
+              id,
+              hierarchyRecord[id].unitAchieveIds.map((path) => unitRecord[path]),
             ])
           )
         : {},
-    [problemList, unitRecord]
+    [problemList, unitRecord, hierarchyRecord]
   );
 
   const histories = useMemo(
@@ -89,11 +85,13 @@ export const ProblemListModal: React.FC<ProblemListModalProps> = ({
   );
 
   const listData = useMemo(() => {
-    return Object.entries(unitsMapByHierarchy).map(([hierarchyId, units]) => ({
-      hierarchy: hierarchiesMap[hierarchyId],
-      units,
-    }));
-  }, [unitsMapByHierarchy, hierarchiesMap, histories]);
+    return problemList
+      ? Object.entries(unitsMapByHierarchy).map(([hierarchyId, units]) => ({
+          hierarchy: hierarchyRecord[hierarchyId],
+          units,
+        }))
+      : [];
+  }, [unitsMapByHierarchy, workbook, hierarchyRecord]);
 
   const handleStartSession = useCallback(
     (filter: StartSessionFilterType) => {
@@ -192,7 +190,7 @@ export const ProblemListModal: React.FC<ProblemListModalProps> = ({
               <EditTab
                 workbookId={workbook.id}
                 problemListId={problemList.id}
-                hierarchies={problemList.hierarchies}
+                hierarchies={listData.map((data) => data.hierarchy)}
                 onCreateHierarchy={onCreateHierarchy}
                 onDeleteHierarchy={onDeleteHierarchy}
                 getProblemUnits={getProblemUnits}

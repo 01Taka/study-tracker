@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { IconArrowRight, IconArrowUp, IconChevronDown, IconChevronUp } from '@tabler/icons-react';
 import {
   ActionIcon,
@@ -8,7 +8,6 @@ import {
   Collapse,
   Flex,
   Group,
-  NumberInput,
   Paper,
   Select,
   Text,

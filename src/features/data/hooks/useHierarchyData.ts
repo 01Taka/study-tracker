@@ -1,20 +1,37 @@
 import { useCallback } from 'react';
 import { useWorkbookData } from '@/features/data/hooks/useWorkbookData';
 import { generateId } from '@/shared/functions/generate-id';
-import { UserDefinedHierarchy } from '@/shared/types/app.types';
+import { UserDefinedHierarchy, Workbook } from '@/shared/types/app.types';
+import { useHierarchyArchive } from './useHierarchyArchive';
 
 export const useHierarchyData = (reloadWorkbook?: () => void) => {
   const { workbooks, updateWorkbooks } = useWorkbookData();
 
+  // 分離したアーカイブ用フック
+  const { hierarchyRecord, updateAndSaveHierarchyRecord } = useHierarchyArchive(reloadWorkbook);
+
+  /**
+   * 1. 階層の新規作成
+   * 実体は hierarchyRecord へ、参照IDは Workbook 側へ保存します。
+   */
   const onCreateHierarchy = useCallback(
     (workbookId: string, problemListId: string, data: { name: string }) => {
+      const newId = generateId();
       const newHierarchy: UserDefinedHierarchy = {
-        id: generateId(),
+        hierarchyId: newId,
+        problemListId,
+        workbookId,
         name: data.name,
-        unitVersionPaths: [],
+        unitAchieveIds: [],
       };
+
+      // A. 実体データの保存 (HierarchyArchive)
+      const nextRecord = { ...hierarchyRecord, [newId]: newHierarchy };
+      updateAndSaveHierarchyRecord(nextRecord);
+
+      // B. 構造の更新 (Workbook 側の ID リスト)
       updateWorkbooks((prevWorkbooks) =>
-        prevWorkbooks.map((wb) => {
+        prevWorkbooks.map((wb): Workbook => {
           if (wb.id !== workbookId) return wb;
           return {
             ...wb,
@@ -22,151 +39,30 @@ export const useHierarchyData = (reloadWorkbook?: () => void) => {
               if (pl.id !== problemListId) return pl;
               return {
                 ...pl,
-                hierarchies: [...pl.hierarchies, newHierarchy],
+                // IDのポインタのみを追加
+                currentHierarchyAchieveIds: [...pl.currentHierarchyAchieveIds, newId],
               };
             }),
           };
         })
       );
-      reloadWorkbook?.();
     },
-    [updateWorkbooks, reloadWorkbook]
-  );
-
-  const onDeleteHierarchy = useCallback(
-    (workbookId: string, problemListId: string, hierarchyId: string) => {
-      updateWorkbooks((prevWorkbooks) =>
-        prevWorkbooks.map((wb) => {
-          if (wb.id !== workbookId) return wb;
-          return {
-            ...wb,
-            problemLists: wb.problemLists.map((pl) => {
-              if (pl.id !== problemListId) return pl;
-              return {
-                ...pl,
-                hierarchies: pl.hierarchies.filter((h) => h.id !== hierarchyId),
-              };
-            }),
-          };
-        })
-      );
-      reloadWorkbook?.();
-    },
-    [updateWorkbooks, reloadWorkbook]
-  );
-
-  // ... (onAddUnitPaths, onReplaceUnitPath, onRemoveUnitPath もそのまま残してOKですが、
-  //      一括更新があれば使用頻度は下がります) ...
-
-  const onAddUnitPaths = useCallback(
-    (
-      workbookId: string,
-      problemListId: string,
-      hierarchyId: string,
-      unitVersionPaths: string[],
-      targetIndex?: number
-    ) => {
-      updateWorkbooks((prevWorkbooks) =>
-        prevWorkbooks.map((wb) => {
-          if (wb.id !== workbookId) return wb;
-          return {
-            ...wb,
-            problemLists: wb.problemLists.map((pl) => {
-              if (pl.id !== problemListId) return pl;
-              return {
-                ...pl,
-                hierarchies: pl.hierarchies.map((h) => {
-                  if (h.id !== hierarchyId) return h;
-                  const index = targetIndex ?? h.unitVersionPaths.length;
-                  const nextPaths = [
-                    ...h.unitVersionPaths.slice(0, index),
-                    ...unitVersionPaths,
-                    ...h.unitVersionPaths.slice(index),
-                  ];
-                  return { ...h, unitVersionPaths: nextPaths };
-                }),
-              };
-            }),
-          };
-        })
-      );
-      reloadWorkbook?.();
-    },
-    [updateWorkbooks, reloadWorkbook]
-  );
-
-  const onReplaceUnitPath = useCallback(
-    (
-      workbookId: string,
-      problemListId: string,
-      hierarchyId: string,
-      targetPath: string,
-      newPath: string
-    ) => {
-      updateWorkbooks((prevWorkbooks) =>
-        prevWorkbooks.map((wb) => {
-          if (wb.id !== workbookId) return wb;
-          return {
-            ...wb,
-            problemLists: wb.problemLists.map((pl) => {
-              if (pl.id !== problemListId) return pl;
-              return {
-                ...pl,
-                hierarchies: pl.hierarchies.map((h) => {
-                  if (h.id !== hierarchyId) return h;
-                  return {
-                    ...h,
-                    unitVersionPaths: h.unitVersionPaths.map((path) =>
-                      path === targetPath ? newPath : path
-                    ),
-                  };
-                }),
-              };
-            }),
-          };
-        })
-      );
-      reloadWorkbook?.();
-    },
-    [updateWorkbooks, reloadWorkbook]
-  );
-
-  const onRemoveUnitPath = useCallback(
-    (workbookId: string, problemListId: string, hierarchyId: string, targetPath: string) => {
-      updateWorkbooks((prevWorkbooks) =>
-        prevWorkbooks.map((wb) => {
-          if (wb.id !== workbookId) return wb;
-          return {
-            ...wb,
-            problemLists: wb.problemLists.map((pl) => {
-              if (pl.id !== problemListId) return pl;
-              return {
-                ...pl,
-                hierarchies: pl.hierarchies.map((h) => {
-                  if (h.id !== hierarchyId) return h;
-                  return {
-                    ...h,
-                    unitVersionPaths: h.unitVersionPaths.filter((path) => path !== targetPath),
-                  };
-                }),
-              };
-            }),
-          };
-        })
-      );
-      reloadWorkbook?.();
-    },
-    [updateWorkbooks, reloadWorkbook]
+    [hierarchyRecord, updateAndSaveHierarchyRecord, updateWorkbooks]
   );
 
   /**
-   * 6. 階層内のパス配列を完全に置き換える (一括更新用)
-   * insertやupdate時のRe-index処理後に、計算済みの全パスを一発で反映させるために使用します。
+   * 2. 階層の削除
+   * 実体と参照の両方を削除します。
    */
-  const onUpdateHierarchyPaths = useCallback(
-    (workbookId: string, problemListId: string, hierarchyId: string, newPaths: string[]) => {
+  const onDeleteHierarchy = useCallback(
+    (workbookId: string, problemListId: string, hierarchyId: string) => {
+      // A. 実体データの削除
+      const { [hierarchyId]: _, ...nextRecord } = hierarchyRecord;
+      updateAndSaveHierarchyRecord(nextRecord);
+
+      // B. 構造の更新 (IDリストからの除外)
       updateWorkbooks((prevWorkbooks) =>
-        prevWorkbooks.map((wb) => {
+        prevWorkbooks.map((wb): Workbook => {
           if (wb.id !== workbookId) return wb;
           return {
             ...wb,
@@ -174,29 +70,68 @@ export const useHierarchyData = (reloadWorkbook?: () => void) => {
               if (pl.id !== problemListId) return pl;
               return {
                 ...pl,
-                hierarchies: pl.hierarchies.map((h) => {
-                  if (h.id !== hierarchyId) return h;
-                  return {
-                    ...h,
-                    unitVersionPaths: newPaths, // 配列を丸ごと置換
-                  };
-                }),
+                currentHierarchyAchieveIds: pl.currentHierarchyAchieveIds.filter(
+                  (id) => id !== hierarchyId
+                ),
               };
             }),
           };
         })
       );
-      reloadWorkbook?.();
     },
-    [updateWorkbooks, reloadWorkbook]
+    [hierarchyRecord, updateAndSaveHierarchyRecord, updateWorkbooks]
+  );
+
+  /**
+   * 3. ユニットパスの削除 (単一削除)
+   * ※実体(hierarchyRecord)内の ID 配列を更新します。
+   * Workbook側の構造に変更はないため、updateWorkbooks は呼び出しません。
+   */
+  const onRemoveUnitPath = useCallback(
+    (hierarchyId: string, targetPath: string) => {
+      const targetHierarchy = hierarchyRecord[hierarchyId];
+      if (!targetHierarchy) return;
+
+      const nextHierarchy: UserDefinedHierarchy = {
+        ...targetHierarchy,
+        unitAchieveIds: targetHierarchy.unitAchieveIds.filter((id) => id !== targetPath),
+      };
+
+      updateAndSaveHierarchyRecord({
+        ...hierarchyRecord,
+        [hierarchyId]: nextHierarchy,
+      });
+    },
+    [hierarchyRecord, updateAndSaveHierarchyRecord]
+  );
+
+  /**
+   * 4. 階層内のパス配列を完全に置き換える (一括更新用)
+   * ※再インデックス時などに使用。実体側のみ更新。
+   */
+  const onUpdateHierarchyPaths = useCallback(
+    (hierarchyId: string, newPaths: string[]) => {
+      const targetHierarchy = hierarchyRecord[hierarchyId];
+      if (!targetHierarchy) return;
+
+      const nextHierarchy: UserDefinedHierarchy = {
+        ...targetHierarchy,
+        unitAchieveIds: newPaths,
+      };
+
+      updateAndSaveHierarchyRecord({
+        ...hierarchyRecord,
+        [hierarchyId]: nextHierarchy,
+      });
+    },
+    [hierarchyRecord, updateAndSaveHierarchyRecord]
   );
 
   return {
     workbooks,
+    hierarchyRecord,
     onCreateHierarchy,
     onDeleteHierarchy,
-    onAddUnitPaths,
-    onReplaceUnitPath,
     onRemoveUnitPath,
     onUpdateHierarchyPaths,
   };

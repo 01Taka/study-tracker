@@ -1,4 +1,4 @@
-import { UnitVersionRecord, Workbook } from '@/shared/types/app.types';
+import { UnitArchiveRecord, Workbook } from '@/shared/types/app.types';
 import { ExportedWorkbookBundle } from '@/shared/types/json.types';
 
 /**
@@ -6,7 +6,7 @@ import { ExportedWorkbookBundle } from '@/shared/types/json.types';
  */
 export function transformWorkbooksToJSON(
   workbooks: Workbook[],
-  unitRecords: UnitVersionRecord
+  unitRecords: UnitArchiveRecord
 ): string {
   const bundle: ExportedWorkbookBundle = {
     workbooks: workbooks.map((wb) => {
@@ -16,7 +16,7 @@ export function transformWorkbooksToJSON(
           name: list.name,
           hierarchies: list.hierarchies.map((hiero) => ({
             name: hiero.name,
-            units: hiero.unitVersionPaths
+            units: hiero.unitAchieveIds
               .map((path) => unitRecords[path])
               .filter(Boolean) // 念のため存在チェック
               .map((unit) => {

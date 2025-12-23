@@ -75,7 +75,15 @@ export const createUnitAttemptResult = (
     const userAnswers = Object.values(userAttempt.answers);
 
     if (unit.problems.length !== userAnswers.length) {
-      // ...エラーログ処理（変更なし）
+      console.error(`[データ不一致] ユニットID: ${unit.unitId}`);
+      console.error(`- 期待される問題数: ${unit.problems.length}`);
+      console.error(`- 送信された回答数: ${userAnswers.length}`);
+
+      console.table({
+        problems: unit.problems.map((p) => `番号: ${p.problemNumber}, 正解: ${p.answer}`),
+        answers: userAnswers.map((a) => `回答: ${a}` || 'N/A'),
+      });
+
       return null;
     }
 
@@ -95,6 +103,7 @@ export const createUnitAttemptResult = (
     });
 
     const resultData: UnitAttemptResultData = {
+      hierarchyId: unit.hierarchyId,
       results,
       resultKey: evalResultKey,
       selfEval: userAttempt.selfEval,

@@ -63,7 +63,7 @@ export const StartSessionTab: React.FC<StartSessionTabProps> = ({
         <ScrollArea h={480} offsetScrollbars scrollbarSize={6} type="hover">
           <Stack gap="xl" pr="xs">
             {listData.map((data) => (
-              <Box key={data.hierarchy.id}>
+              <Box key={data.hierarchy.hierarchyId}>
                 <Divider
                   label={
                     <Text fw={700} size="xs" c="gray.6" tt="uppercase">

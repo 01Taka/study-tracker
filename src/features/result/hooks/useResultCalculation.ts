@@ -1,10 +1,12 @@
 import { useMemo } from 'react';
 import { useAttemptHistory } from '@/features/data/hooks/useAttemptHistory';
+import { useHierarchyArchive } from '@/features/data/hooks/useHierarchyArchive';
 import { useProblemListData } from '@/features/data/hooks/useProblemListData';
 import { calculateScore } from '../functions/scoring';
 
 export const useResultCalculation = (resultId: string) => {
   const { histories } = useAttemptHistory();
+  const { hierarchyRecord } = useHierarchyArchive();
 
   const history = useMemo(() => histories.find((h) => h.id === resultId), [histories, resultId]);
   const { getProblemList } = useProblemListData(history?.workbookId ?? '');
@@ -17,12 +19,13 @@ export const useResultCalculation = (resultId: string) => {
   const attemptedHierarchies = useMemo(() => {
     if (!history || !currentProblemList) return [];
     const attemptedUnitIds = new Set(Object.keys(history.unitAttempts));
-    return currentProblemList.hierarchies
-      .map((hierarchy) => ({
-        ...hierarchy,
-        unitVersionPaths: hierarchy.unitVersionPaths.filter((path) => attemptedUnitIds.has(path)),
+    return currentProblemList.currentHierarchyAchieveIds
+      .map((id) => ({
+        ...hierarchyRecord[id],
+        unitAchieveIds:
+          hierarchyRecord[id]?.unitAchieveIds.filter((path) => attemptedUnitIds.has(path)) ?? [],
       }))
-      .filter((hierarchy) => hierarchy.unitVersionPaths.length > 0);
+      .filter((hierarchy) => hierarchy.unitAchieveIds.length > 0);
   }, [currentProblemList, history]);
 
   const scoreSummary = useMemo(() => {

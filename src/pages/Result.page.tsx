@@ -53,10 +53,10 @@ export const ResultPage: React.FC = () => {
 
       {/* リスト表示セクション */}
       {attemptedHierarchies.map((h) => (
-        <Box key={h.id} mb="xl">
+        <Box key={h.hierarchyId} mb="xl">
           <Divider label={h.name} labelPosition="left" mb="sm" />
           <Stack gap={4}>
-            {h.unitVersionPaths.map((uid) => {
+            {h.unitAchieveIds.map((uid) => {
               return <ResultRow key={uid} attempts={history?.unitAttempts[uid]} />;
             })}
           </Stack>

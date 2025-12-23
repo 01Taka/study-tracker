@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from '@mantine/form';
 import { useAttemptHistory } from '@/features/data/hooks/useAttemptHistory';
+import { useHierarchyArchive } from '@/features/data/hooks/useHierarchyArchive';
 import { useProblemListData } from '@/features/data/hooks/useProblemListData';
 import { useProblemUnitData } from '@/features/data/hooks/useProblemUnitData';
 import { UnitAttemptUserAnswers, UserDefinedHierarchy } from '@/shared/types/app.types';
@@ -16,15 +17,18 @@ export const useTackleForm = (workbookId: string, problemListId: string) => {
   const navigate = useNavigate();
   const { getProblemList } = useProblemListData(workbookId);
   const { getProblemUnits, unitRecord } = useProblemUnitData();
+  const { hierarchyRecord } = useHierarchyArchive();
   const { activeSession, endSession } = useAttemptHistory();
   const [activeTab, setActiveTab] = useState<string | null>(null);
 
   const problemList = getProblemList(problemListId);
 
   // 現在のタブに基づいたユニット情報の取得
-  const currentHierarchy = problemList?.hierarchies.find((h) => h.id === activeTab);
+  const currentHierarchyId = problemList?.currentHierarchyAchieveIds.find((id) => id === activeTab);
+  const currentHierarchy = currentHierarchyId ? hierarchyRecord[currentHierarchyId] : null;
+
   const units = currentHierarchy
-    ? getProblemUnits(currentHierarchy.unitVersionPaths, activeSession?.attemptingUnitIds ?? [])
+    ? getProblemUnits(currentHierarchy.unitAchieveIds, activeSession?.attemptingUnitIds ?? [])
     : [];
 
   // フォームの初期値計算
@@ -32,10 +36,11 @@ export const useTackleForm = (workbookId: string, problemListId: string) => {
     if (!problemList || !activeSession) return {};
     const obj: AnswerValues['answers'] = {};
 
-    problemList.hierarchies.forEach((h) => {
+    problemList.currentHierarchyAchieveIds.forEach((id) => {
       // 全階層のユニットを事前に取得して初期値を生成
+      const hierarchy = hierarchyRecord[id];
       const allUnitsInHierarchy = getProblemUnits(
-        h.unitVersionPaths,
+        hierarchy.unitAchieveIds,
         activeSession.attemptingUnitIds
       );
 
@@ -68,8 +73,8 @@ export const useTackleForm = (workbookId: string, problemListId: string) => {
 
   // デフォルトタブ設定
   useEffect(() => {
-    if (problemList?.hierarchies.length && !activeTab) {
-      setActiveTab(problemList.hierarchies[0].id);
+    if (problemList?.currentHierarchyAchieveIds.length && !activeTab) {
+      setActiveTab(problemList.currentHierarchyAchieveIds[0]);
     }
   }, [problemList, activeTab]);
 
@@ -87,13 +92,14 @@ export const useTackleForm = (workbookId: string, problemListId: string) => {
 
   const filteredHierarchies: UserDefinedHierarchy[] = useMemo(() => {
     if (!problemList || !activeSession) return [];
-    return problemList.hierarchies.map((hierarchy) => {
-      const paths = hierarchy.unitVersionPaths.filter((path) =>
+    return problemList.currentHierarchyAchieveIds.map((id) => {
+      const hierarchy = hierarchyRecord[id];
+      const ids = hierarchy.unitAchieveIds.filter((path) =>
         activeSession.attemptingUnitIds.includes(path)
       );
       return {
         ...hierarchy,
-        unitVersionPaths: paths,
+        unitAchieveIds: ids,
       };
     });
   }, [problemList, activeSession]);

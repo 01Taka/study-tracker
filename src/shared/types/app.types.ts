@@ -54,24 +54,26 @@ export interface ProblemList {
   id: string;
   name: string;
   createdAt: number;
-  hierarchies: UserDefinedHierarchy[]; // 問題定義配列
+  currentHierarchyAchieveIds: string[];
 }
 
 /** 階層3: ユーザー定義階層 (大問・章など) */
 export interface UserDefinedHierarchy {
-  id: string; // 不変ID
+  hierarchyId: string;
+  problemListId: string; // 親の問題集
+  workbookId: string; // 親の問題集が所属するワークブック
   name: string; // 「第1章」「大問1」など
-  unitVersionPaths: string[]; // ProblemUnit.unitId の配列
+  unitAchieveIds: string[];
 }
 
 /** 階層4: 問題ユニット (ProblemUnit)
  * ユニットはイミュータブルであり、編集時は新規IDが発行される
  */
 export interface ProblemUnit {
-  unitId: string; // ユニットバージョンパスと同義
-  problemListId: string;
-  workbookId: string;
-  hierarchyId: string;
+  unitId: string;
+  hierarchyId: string; // 親のヒエラルキー
+  problemListId: string; // 親のヒエラルキーが所属する問題集
+  workbookId: string; // 親のヒエラルキーが所属する問題集が所属するワークブック
   question?: string; // オプショナル
   problems: ProblemUnitProblem[];
   scoring: number; // 配点
@@ -110,6 +112,7 @@ export type UnitAttemptResult = {
 
 /** ユニットごとの具体的な回答内容と判定結果 */
 export type UnitAttemptResultData = {
+  hierarchyId: string;
   results: UnitAttemptResultProblemData[];
   resultKey: SelfEvalResultKey;
   selfEval: SelfEvalType;
@@ -118,7 +121,7 @@ export type UnitAttemptResultData = {
 };
 
 export type UnitAttemptResultProblemData = {
-  problemNumber: number; // keyと一致する
+  problemNumber: number;
   answer: string;
   collectAnswer: string;
   judge: JudgeStatus;
@@ -132,6 +135,19 @@ export type UnitAttemptUserAnswers = {
   answers: Record<string, string>; // problemNumber, valueが回答
   selfEval: SelfEvalType;
 };
+
+/** 取得したい結合データの型 */
+export type CombinedProblemResult = UnitAttemptResultProblemData & {
+  parent: Omit<UnitAttemptResultData, 'results'>; // 無限ループを避けるためresultsは除外
+};
+
+/** * 最終的な参照用オブジェクトの型
+ * Record<AttemptId, Record<HierarchyId, Record<ProblemNumber, CombinedProblemResult>>>
+ */
+export type HistoryLookupMap = Record<
+  string,
+  Record<string, Record<number, CombinedProblemResult>>
+>;
 
 /** * ============================================================
  * 4. セッション・管理・編集用 (Management & UI)
@@ -148,8 +164,12 @@ export interface AttemptingSessionData {
   attemptingUnitIds: string[];
 }
 
+export interface HierarchyArchiveRecord {
+  [hierarchyId: string]: UserDefinedHierarchy;
+}
+
 /** ユニットバージョン記録 (履歴追跡用) */
-export interface UnitVersionRecord {
+export interface UnitArchiveRecord {
   [unitId: string]: ProblemUnit;
 }
 

@@ -1,7 +1,7 @@
 import {
   ProblemList,
   ProblemUnit,
-  UnitVersionRecord,
+  UnitArchiveRecord,
   UserDefinedHierarchy,
   Workbook,
 } from '@/shared/types/app.types';
@@ -13,11 +13,11 @@ import { generateId } from '../generate-id';
  */
 export function importWorkbooksFromJSON(jsonString: string): {
   workbooks: Workbook[];
-  unitRecords: UnitVersionRecord;
+  unitRecords: UnitArchiveRecord;
 } {
   const data: ExportedWorkbookBundle = JSON.parse(jsonString);
   const now = Date.now();
-  const allUnitRecords: UnitVersionRecord = {};
+  const allUnitRecords: UnitArchiveRecord = {};
 
   const workbooks: Workbook[] = data.workbooks.map((wbData) => {
     const workbookId = generateId();
@@ -27,7 +27,7 @@ export function importWorkbooksFromJSON(jsonString: string): {
 
       const hierarchies: UserDefinedHierarchy[] = listData.hierarchies.map((hieroData) => {
         const hierarchyId = generateId();
-        const unitVersionPaths: string[] = [];
+        const unitAchieveIds: string[] = [];
 
         hieroData.units.forEach((unitData) => {
           const unitId = generateId();
@@ -43,13 +43,13 @@ export function importWorkbooksFromJSON(jsonString: string): {
           };
 
           allUnitRecords[unitId] = newUnit;
-          unitVersionPaths.push(unitId);
+          unitAchieveIds.push(unitId);
         });
 
         return {
           id: hierarchyId,
           name: hieroData.name,
-          unitVersionPaths,
+          unitAchieveIds,
         };
       });
 

@@ -1,13 +1,13 @@
 import { useCallback } from 'react';
 import { transformWorkbooksToJSON } from '@/shared/functions/json/export';
 import { importWorkbooksFromJSON } from '@/shared/functions/json/import';
-import { UnitVersionRecord, Workbook } from '@/shared/types/app.types';
+import { UnitArchiveRecord, Workbook } from '@/shared/types/app.types';
 
 export const useWorkbookTransfer = (
   workbooks: Workbook[],
-  unitRecord: UnitVersionRecord,
+  unitRecord: UnitArchiveRecord,
   updateWorkbooks: (updater: (latest: Workbook[]) => Workbook[]) => void,
-  updateAndSaveUnitRecord: (nextRecord: UnitVersionRecord) => void
+  updateAndSaveUnitRecord: (nextRecord: UnitArchiveRecord) => void
 ) => {
   /**
    * 指定したIDのワークブック配列をJSON文字列として書き出す

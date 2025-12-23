@@ -1,5 +1,5 @@
 import React from 'react';
-import { IconEdit, IconTrash } from '@tabler/icons-react';
+import { IconTrash } from '@tabler/icons-react';
 import { ActionIcon, Badge, Box, Card, Grid, Group, Text } from '@mantine/core';
 import { ProblemUnit } from '@/shared/types/app.types';
 
@@ -67,7 +67,7 @@ export const UnitDisplayCard: React.FC<UnitDisplayCardProps> = ({
             </Box>
 
             <Text fw={700} size="md" c="dark" lineClamp={1} style={{ flex: 1 }}>
-              {unit.answers.join(' , ')}
+              {unit.problems.map((problem) => problem.answer).join(' , ')}
               {unit.question && (
                 <Text component="span" size="xs" c="dimmed" ml={8} fw={400}>
                   {unit.question}

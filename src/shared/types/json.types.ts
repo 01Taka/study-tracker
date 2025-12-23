@@ -22,10 +22,7 @@ export type ExportableProblemUnit = Omit<
 
 /** * エクスポート用：ユーザー定義階層
  */
-export type ExportableUserDefinedHierarchy = Omit<
-  UserDefinedHierarchy,
-  'id' | 'unitVersionPaths'
-> & {
+export type ExportableUserDefinedHierarchy = Omit<UserDefinedHierarchy, 'id' | 'unitAchieveIds'> & {
   units: ExportableProblemUnit[]; // IDの配列ではなく実体をネストさせる
 };
 

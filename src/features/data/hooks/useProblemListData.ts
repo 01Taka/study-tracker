@@ -2,9 +2,11 @@ import { useCallback, useMemo } from 'react';
 import { useWorkbookData } from '@/features/data/hooks/useWorkbookData';
 import { generateId } from '@/shared/functions/generate-id';
 import { ProblemList, UserDefinedHierarchy } from '@/shared/types/app.types';
+import { useHierarchyArchive } from './useHierarchyArchive';
 
 export const useProblemListData = (workbookId: string) => {
   const { workbooks, updateWorkbooks, reloadWorkbook } = useWorkbookData();
+  const { addHierarchy } = useHierarchyArchive();
 
   /**
    * 原因対策: workbooks 自体を依存配列に入れ、
@@ -20,17 +22,24 @@ export const useProblemListData = (workbookId: string) => {
 
   const onCreateProblemList = useCallback(
     (data: { name: string; defaultHierarchyName: string }) => {
+      const newProblemListId = generateId();
+      const newHierarchyId = generateId();
+
       const defaultHierarchy: UserDefinedHierarchy = {
-        id: generateId(),
+        hierarchyId: newHierarchyId,
+        problemListId: newProblemListId,
+        workbookId,
         name: data.defaultHierarchyName,
-        unitVersionPaths: [],
+        unitAchieveIds: [],
       };
 
+      addHierarchy(defaultHierarchy);
+
       const newProblemList: ProblemList = {
-        id: generateId(),
+        id: newProblemListId,
         name: data.name,
         createdAt: Date.now(),
-        hierarchies: [defaultHierarchy],
+        currentHierarchyAchieveIds: [newHierarchyId],
       };
 
       // 保存機能付きの updater を使用
@@ -40,7 +49,7 @@ export const useProblemListData = (workbookId: string) => {
         )
       );
     },
-    [workbookId, updateWorkbooks]
+    [workbookId, updateWorkbooks, addHierarchy]
   );
 
   const getProblemList = useCallback(

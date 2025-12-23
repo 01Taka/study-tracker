@@ -16,6 +16,7 @@ import {
   Tabs,
   Text,
 } from '@mantine/core';
+import { useHierarchyArchive } from '@/features/data/hooks/useHierarchyArchive';
 import { ProblemUnitCard } from '@/features/tackle/components/ProblemUnitCard';
 import { EVAL_BASE_CONFIG } from '@/features/tackle/constants/evaluations';
 import { useTackleForm } from '@/features/tackle/hooks/useTackleForm';
@@ -29,6 +30,8 @@ export const TacklePage: React.FC = () => {
   const [autoScrollEnabled, setAutoScrollEnabled] = useState(true);
   const [lastInputIndex, setLastInputIndex] = useState(0);
   const [settingsOpened, setSettingsOpened] = useState(true);
+
+  const { hierarchyRecord } = useHierarchyArchive();
 
   const {
     problemList,
@@ -98,9 +101,9 @@ export const TacklePage: React.FC = () => {
             style={{ flexGrow: 1 }}
           >
             <Tabs.List>
-              {problemList.hierarchies.map((h) => (
-                <Tabs.Tab key={h.id} value={h.id}>
-                  {h.name}
+              {problemList.currentHierarchyAchieveIds.map((id) => (
+                <Tabs.Tab key={id} value={id}>
+                  {hierarchyRecord[id].name}
                 </Tabs.Tab>
               ))}
             </Tabs.List>
@@ -166,15 +169,15 @@ export const TacklePage: React.FC = () => {
             keepMounted={false}
           >
             {filteredHierarchies.map((h) => (
-              <Tabs.Panel key={h.id} value={h.id} pt="md">
+              <Tabs.Panel key={h.hierarchyId} value={h.hierarchyId} pt="md">
                 <Stack gap="lg">
                   {units.map((unit, index) => {
                     const range = getProblemRangeFromUnit(unit);
                     return (
                       <div
-                        key={`${h.id}-${unit.unitId}`}
+                        key={`${h.hierarchyId}-${unit.unitId}`}
                         ref={(el) => {
-                          if (el && activeTab === h.id) {
+                          if (el && activeTab === h.hierarchyId) {
                             cardRefs.current.set(index, el);
                           } else {
                             cardRefs.current.delete(index);
