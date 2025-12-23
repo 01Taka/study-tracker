@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback } from 'react';
+import { useAppStore } from '@/features/data/store/useAppStore';
 import { createUnitAttemptResult } from '@/shared/functions/attempt-result';
 import { generateId } from '@/shared/functions/generate-id';
 import {
@@ -8,21 +9,12 @@ import {
   UnitAttemptUserAnswers,
 } from '@/shared/types/app.types';
 
-const STORAGE_KEY = 'attempt_history_list';
-const ACTIVE_SESSION_KEY = 'active_attempt_session';
-
 export const useAttemptHistory = () => {
-  const [histories, setHistories] = useState<AttemptHistory[]>([]);
-  const [activeSession, setActiveSession] = useState<AttemptingSessionData | null>(null);
-
-  // 初期ロード
-  useEffect(() => {
-    const savedHistories = localStorage.getItem(STORAGE_KEY);
-    if (savedHistories) setHistories(JSON.parse(savedHistories));
-
-    const savedSession = localStorage.getItem(ACTIVE_SESSION_KEY);
-    if (savedSession) setActiveSession(JSON.parse(savedSession));
-  }, []);
+  // ストアから必要な状態とアクションを抽出
+  const histories = useAppStore((state) => state.histories);
+  const activeSession = useAppStore((state) => state.activeSession);
+  const setHistories = useAppStore((state) => state.setHistories);
+  const setActiveSession = useAppStore((state) => state.setActiveSession);
 
   /**
    * セッション開始
@@ -45,10 +37,10 @@ export const useAttemptHistory = () => {
         attemptingUnitIds: args.attemptingUnitIds,
       };
 
+      // ストア経由で永続化保存
       setActiveSession(newSession);
-      localStorage.setItem(ACTIVE_SESSION_KEY, JSON.stringify(newSession));
     },
-    [activeSession]
+    [activeSession, setActiveSession]
   );
 
   /**
@@ -75,40 +67,33 @@ export const useAttemptHistory = () => {
         unitAttempts,
       };
 
-      setHistories((prev) => {
-        const updated = [completeHistory, ...prev];
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-        return updated;
-      });
+      // 履歴を先頭に追加して保存
+      setHistories([completeHistory, ...histories]);
 
+      // アクティブセッションをクリア
       setActiveSession(null);
-      localStorage.removeItem(ACTIVE_SESSION_KEY);
       return true;
     },
-    [activeSession]
+    [activeSession, histories, setHistories, setActiveSession]
   );
 
   /**
    * セッションのキャンセル
-   * 進行中のデータを保存せずに破棄します
    */
   const cancelSession = useCallback(() => {
     if (!activeSession) return;
-
     setActiveSession(null);
-    localStorage.removeItem(ACTIVE_SESSION_KEY);
-  }, [activeSession]);
+  }, [activeSession, setActiveSession]);
 
   /**
    * 全履歴の削除
    */
   const clearAllHistories = useCallback(() => {
-    localStorage.removeItem(STORAGE_KEY);
     setHistories([]);
-  }, []);
+  }, [setHistories]);
 
   /**
-   * 特定のワークブックの履歴を、開始時間の降順（新しい順）で取得する
+   * 特定のワークブックの履歴を取得する
    */
   const getHistoriesByWorkbookId = useCallback(
     (workbookId: string, order: 'asc' | 'desc' = 'desc') => {

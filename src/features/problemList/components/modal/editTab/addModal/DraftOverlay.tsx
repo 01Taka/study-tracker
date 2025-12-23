@@ -19,7 +19,7 @@ import {
   PROBLEM_TYPE_SELECTIONS,
 } from '@/features/problemList/constants/form-constants';
 import { useKeyboardInput } from '@/features/problemList/hooks/useKeyboardInput';
-import { UnitBulkAddFormUnit, UnitBulkAddFormValues } from '@/features/problemList/types/types';
+import { UnitBulkAddFormValues } from '@/features/problemList/types/types';
 import { MARK_SELECTIONS } from '@/shared/constants/mark-selections';
 
 interface DraftOverlayProps {
@@ -31,16 +31,9 @@ interface DraftOverlayProps {
   onToggle: () => void;
   commitDraft: (optionalAnswers?: string[] | undefined) => void;
   pushAnswerToDraft: (val: string) => void;
-  updateUnitFields: (index: number, val: Partial<UnitBulkAddFormUnit>) => void;
 }
 
-export const DraftOverlay = ({
-  form,
-  opened,
-  onToggle,
-  commitDraft,
-  updateUnitFields,
-}: DraftOverlayProps) => {
+export const DraftOverlay = ({ form, opened, onToggle, commitDraft }: DraftOverlayProps) => {
   const { unitSetting, answerDraft, questionDraft } = form.values;
   const [answerInput, setAnswerInput] = useState<string>('');
   const [clickedId, setClickedId] = useState<string | null>(null);

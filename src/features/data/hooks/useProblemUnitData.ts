@@ -4,13 +4,13 @@ import { ProblemUnit, ProblemUnitData } from '@/shared/types/app.types';
 import { useHierarchyData } from './useHierarchyData';
 import { useProblemUnitArchive } from './useProblemUnitArchive'; // 切り出したフック
 
-export const useProblemUnitData = (reloadWorkbook?: () => void) => {
+export const useProblemUnitData = () => {
   // ストレージ操作の責務を委譲
-  const { unitRecord, updateAndSaveRecord, reloadUnitRecord, getProblemUnit, getProblemUnits } =
-    useProblemUnitArchive(reloadWorkbook);
+  const { unitRecord, updateAndSaveRecord, getProblemUnit, getProblemUnits } =
+    useProblemUnitArchive();
 
   const { workbooks, hierarchyRecord, onUpdateHierarchyPaths, onRemoveUnitPath } =
-    useHierarchyData(reloadWorkbook);
+    useHierarchyData();
 
   /**
    * コアロジック: リインデックス
@@ -172,7 +172,6 @@ export const useProblemUnitData = (reloadWorkbook?: () => void) => {
   return {
     unitRecord,
     updateAndSaveRecord,
-    reloadUnitRecord,
     getProblemUnit,
     getProblemUnits,
     insertUnitsToHierarchy,

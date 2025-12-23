@@ -4,11 +4,9 @@ import { generateId } from '@/shared/functions/generate-id';
 import { UserDefinedHierarchy, Workbook } from '@/shared/types/app.types';
 import { useHierarchyArchive } from './useHierarchyArchive';
 
-export const useHierarchyData = (reloadWorkbook?: () => void) => {
+export const useHierarchyData = () => {
   const { workbooks, updateWorkbooks } = useWorkbookData();
-
-  // 分離したアーカイブ用フック
-  const { hierarchyRecord, updateAndSaveHierarchyRecord } = useHierarchyArchive(reloadWorkbook);
+  const { hierarchyRecord, updateAndSaveHierarchyRecord } = useHierarchyArchive();
 
   /**
    * 1. 階層の新規作成

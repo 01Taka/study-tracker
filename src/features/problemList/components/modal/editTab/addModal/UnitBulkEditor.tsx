@@ -273,7 +273,6 @@ export const UnitBulkEditor = ({ opened, startProblemNumber, onClose, onSubmit }
             onToggle={() => setIsOverlayOpened((prev) => !prev)}
             commitDraft={commitDraft}
             pushAnswerToDraft={(val) => form.insertListItem('answerDraft', val)}
-            updateUnitFields={updateUnitFields}
           />
         )}
       </Box>

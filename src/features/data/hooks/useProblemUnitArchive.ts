@@ -1,59 +1,40 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback } from 'react';
+import { useAppStore } from '@/features/data/store/useAppStore';
 import { ProblemUnit, UnitArchiveRecord } from '@/shared/types/app.types';
 
-const UNITS_STORAGE_KEY = 'app_units_record';
+export const useProblemUnitArchive = () => {
+  const unitRecord = useAppStore((state) => state.unitRecord);
+  const setUnitRecord = useAppStore((state) => state.setUnitRecord);
 
-export const useProblemUnitArchive = (reloadWorkbook?: () => void) => {
-  const [unitRecord, setUnitRecord] = useState<UnitArchiveRecord>({});
-
-  // データの読み込み
-  const reloadUnitRecord = useCallback(() => {
-    const saved = localStorage.getItem(UNITS_STORAGE_KEY);
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        setUnitRecord(parsed);
-        return parsed as UnitArchiveRecord;
-      } catch (e) {
-        console.error('Failed to load units:', e);
-      }
-    }
-    return null;
-  }, []);
-
-  // 初回マウント時に読み込み
-  useEffect(() => {
-    reloadUnitRecord();
-  }, [reloadUnitRecord]);
-
-  // データの保存
+  /**
+   * データの保存 (Zustand 経由で LocalStorage に自動永続化)
+   */
   const updateAndSaveRecord = useCallback(
     (nextRecord: UnitArchiveRecord) => {
       setUnitRecord(nextRecord);
-      try {
-        localStorage.setItem(UNITS_STORAGE_KEY, JSON.stringify(nextRecord));
-      } catch (e) {
-        console.error('Failed to save units:', e);
-      }
-      reloadWorkbook?.();
+      // reloadWorkbook?() は、Zustand がリアクティブに全コンポーネントを更新するため不要になります
     },
-    [reloadWorkbook]
+    [setUnitRecord]
   );
 
-  // 単一ユニットの取得
+  /**
+   * 単一ユニットの取得
+   */
   const getProblemUnit = useCallback(
     (id: string | undefined) => (id ? unitRecord[id] || null : null),
     [unitRecord]
   );
 
-  // 複数ユニットの取得（フィルタリング込み）
+  /**
+   * 複数ユニットの取得（フィルタリング込み）
+   */
   const getProblemUnits = useCallback(
     (paths: string[], filterIds?: string[]) => {
       return paths
         .map((path) => unitRecord[path])
         .filter((unit): unit is ProblemUnit => {
           if (!unit) return false;
-          if (!filterIds) return true;
+          if (!filterIds || filterIds.length === 0) return true;
           return filterIds.includes(unit.unitId);
         });
     },
@@ -62,7 +43,6 @@ export const useProblemUnitArchive = (reloadWorkbook?: () => void) => {
 
   return {
     unitRecord,
-    reloadUnitRecord,
     updateAndSaveRecord,
     getProblemUnit,
     getProblemUnits,

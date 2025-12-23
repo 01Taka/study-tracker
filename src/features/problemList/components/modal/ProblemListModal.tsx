@@ -1,6 +1,5 @@
-import React, { useCallback, useMemo } from 'react';
+import React from 'react';
 import { IconChartBar, IconEdit, IconPlayerPlay, IconX } from '@tabler/icons-react';
-import { useNavigate } from 'react-router-dom';
 import {
   ActionIcon,
   Box,
@@ -13,12 +12,8 @@ import {
   Text,
   Title,
 } from '@mantine/core';
-import { useAttemptHistory } from '@/features/data/hooks/useAttemptHistory';
-import { useHierarchyData } from '@/features/data/hooks/useHierarchyData';
-import { useProblemUnitData } from '@/features/data/hooks/useProblemUnitData';
-import { getLatestAttemptMap } from '@/shared/functions/attempt-utils';
-import { useUnitSelection } from '@/shared/hooks/useUnitSelection';
-import { ProblemList, StartSessionFilterType, Workbook } from '@/shared/types/app.types';
+import { ProblemList, Workbook } from '@/shared/types/app.types';
+import { useProblemListModal } from '../../hooks/useProblemListModal';
 import { AnalysisTab } from './analysisTab/AnalysisTab';
 import { EditTab } from './editTab/EditTab';
 import { StartSessionTab } from './startSessionTab/StartSessionTab';
@@ -28,7 +23,6 @@ interface ProblemListModalProps {
   onClose: () => void;
   workbook: Workbook | null;
   problemList: ProblemList | null;
-  reloadWorkbook: () => void;
 }
 
 export const ProblemListModal: React.FC<ProblemListModalProps> = ({
@@ -36,84 +30,10 @@ export const ProblemListModal: React.FC<ProblemListModalProps> = ({
   onClose,
   workbook,
   problemList,
-  reloadWorkbook,
 }) => {
-  const navigate = useNavigate();
+  const { histories, listData, hierarchyIds, getIsSelected, getSelectedCount, handleStartSession } =
+    useProblemListModal({ workbook, problemList });
 
-  const { hierarchyRecord, onCreateHierarchy, onDeleteHierarchy } =
-    useHierarchyData(reloadWorkbook);
-
-  const {
-    unitRecord,
-    getProblemUnits,
-    insertUnitsToHierarchy,
-    removeUnitFromHierarchy,
-    updateUnit,
-  } = useProblemUnitData(reloadWorkbook);
-
-  const { isSessionActive, startSession, cancelSession, getHistoriesByWorkbookId } =
-    useAttemptHistory();
-
-  const unitsMapByHierarchy = useMemo(
-    () =>
-      problemList
-        ? Object.fromEntries(
-            problemList.currentHierarchyAchieveIds.map((id) => [
-              id,
-              hierarchyRecord[id].unitAchieveIds.map((path) => unitRecord[path]),
-            ])
-          )
-        : {},
-    [problemList, unitRecord, hierarchyRecord]
-  );
-
-  const histories = useMemo(
-    () => (workbook ? getHistoriesByWorkbookId(workbook.id) : []),
-    [workbook, getHistoriesByWorkbookId]
-  );
-
-  const latestAttemptMap = problemList ? getLatestAttemptMap(problemList, histories) : {};
-
-  const unitIds = useMemo(
-    () => Object.values(unitsMapByHierarchy).flatMap((data) => data.map((unit) => unit.unitId)),
-    [unitsMapByHierarchy]
-  );
-
-  const { getIsSelected, getSelectedUnitIds, getSelectedCount } = useUnitSelection(
-    unitIds,
-    latestAttemptMap
-  );
-
-  const listData = useMemo(() => {
-    return problemList
-      ? Object.entries(unitsMapByHierarchy).map(([hierarchyId, units]) => ({
-          hierarchy: hierarchyRecord[hierarchyId],
-          units,
-        }))
-      : [];
-  }, [unitsMapByHierarchy, workbook, hierarchyRecord]);
-
-  const handleStartSession = useCallback(
-    (filter: StartSessionFilterType) => {
-      if (workbook && problemList) {
-        if (isSessionActive) {
-          cancelSession();
-        }
-        const attemptingUnitIds = getSelectedUnitIds(filter);
-
-        startSession({
-          problemListVersionId: 'ver1.0',
-          workbookId: workbook.id,
-          problemListId: problemList.id,
-          attemptingUnitIds,
-        });
-        navigate(`/tackle/${workbook.id}/${problemList.id}`);
-      }
-    },
-    [workbook, problemList, isSessionActive, cancelSession, startSession, getSelectedUnitIds]
-  );
-
-  // データがない場合の表示（ガード句）
   const renderEmptyState = () => (
     <Center style={{ flex: 1 }} p="xl">
       <Stack align="center" gap="sm">
@@ -140,7 +60,6 @@ export const ProblemListModal: React.FC<ProblemListModalProps> = ({
       withCloseButton={false}
       styles={{ content: { display: 'flex', flexDirection: 'column' } }}
     >
-      {/* 固定ヘッダー */}
       <Box p="md" style={{ borderBottom: '1px solid var(--mantine-color-gray-3)' }}>
         <Group justify="space-between">
           <Box>
@@ -157,7 +76,6 @@ export const ProblemListModal: React.FC<ProblemListModalProps> = ({
         </Group>
       </Box>
 
-      {/* コンテンツエリア */}
       {!workbook || !problemList ? (
         renderEmptyState()
       ) : (
@@ -184,19 +102,13 @@ export const ProblemListModal: React.FC<ProblemListModalProps> = ({
               />
             </Tabs.Panel>
             <Tabs.Panel value="analysis">
-              <AnalysisTab histories={histories} unitIds={Object.keys(unitRecord)} />
+              <AnalysisTab histories={histories} hierarchies={[]} />
             </Tabs.Panel>
             <Tabs.Panel value="edit">
               <EditTab
                 workbookId={workbook.id}
                 problemListId={problemList.id}
-                hierarchies={listData.map((data) => data.hierarchy)}
-                onCreateHierarchy={onCreateHierarchy}
-                onDeleteHierarchy={onDeleteHierarchy}
-                getProblemUnits={getProblemUnits}
-                insertUnitsToHierarchy={insertUnitsToHierarchy}
-                removeUnitFromHierarchy={removeUnitFromHierarchy}
-                updateUnit={updateUnit}
+                hierarchyIds={hierarchyIds}
               />
             </Tabs.Panel>
           </Box>

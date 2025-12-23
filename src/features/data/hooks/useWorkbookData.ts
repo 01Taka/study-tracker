@@ -1,65 +1,22 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback } from 'react';
+import { useAppStore } from '@/features/data/store/useAppStore';
 import { generateId } from '@/shared/functions/generate-id';
 import { Workbook } from '@/shared/types/app.types';
 
-const STORAGE_KEY = 'app_workbooks_data';
-
 export const useWorkbookData = () => {
-  const [workbooks, setWorkbooks] = useState<Workbook[]>([]);
-
-  /**
-   * ストレージから直接データを読み取る（同期）
-   */
-  const getLatestWorkbooksFromStorage = useCallback((): Workbook[] => {
-    const savedData = localStorage.getItem(STORAGE_KEY);
-    if (!savedData) return [];
-    try {
-      return JSON.parse(savedData);
-    } catch (e) {
-      console.error('Failed to parse storage data:', e);
-      return [];
-    }
-  }, []);
-
-  /**
-   * 明示的な保存関数
-   */
-  const saveWorkbooks = useCallback((updatedWorkbooks: Workbook[]) => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedWorkbooks));
-      setWorkbooks(updatedWorkbooks);
-    } catch (e) {
-      console.error('Failed to save workbooks:', e);
-    }
-  }, []);
-
-  const reloadWorkbook = useCallback(() => {
-    const data = getLatestWorkbooksFromStorage();
-    setWorkbooks(data);
-    return data;
-  }, [getLatestWorkbooksFromStorage]);
-
-  // 初回読み込み
-  useEffect(() => {
-    reloadWorkbook();
-  }, [reloadWorkbook]);
+  const workbooks = useAppStore((state) => state.workbooks);
+  const setWorkbooks = useAppStore((state) => state.setWorkbooks);
 
   /**
    * ワークブックデータの更新
-   * 引数のupdaterにはストレージから読み取った最新のデータが渡される
    */
   const updateWorkbooks = useCallback(
     (updater: (latest: Workbook[]) => Workbook[]) => {
-      // 1. ストレージから最新の状態を取得
-      const latestFromStorage = getLatestWorkbooksFromStorage();
-
-      // 2. 最新の状態に対して更新を適用
-      const next = updater(latestFromStorage);
-
-      // 3. ストレージに保存し、Reactのステートも更新
-      saveWorkbooks(next);
+      // 最新のstate（workbooks）を元に更新
+      const next = updater(workbooks);
+      setWorkbooks(next);
     },
-    [getLatestWorkbooksFromStorage, saveWorkbooks]
+    [workbooks, setWorkbooks]
   );
 
   /**
@@ -67,17 +24,15 @@ export const useWorkbookData = () => {
    */
   const onCreate = useCallback(
     (data: { name: string }) => {
-      updateWorkbooks((prev) => [
-        ...prev,
-        {
-          id: generateId(),
-          name: data.name,
-          createdAt: Date.now(),
-          problemLists: [],
-        },
-      ]);
+      const newWorkbook: Workbook = {
+        id: generateId(),
+        name: data.name,
+        createdAt: Date.now(),
+        problemLists: [],
+      };
+      setWorkbooks([...workbooks, newWorkbook]);
     },
-    [updateWorkbooks]
+    [workbooks, setWorkbooks]
   );
 
   const getWorkbook = useCallback(
@@ -89,10 +44,8 @@ export const useWorkbookData = () => {
 
   return {
     workbooks,
-    reloadWorkbook,
     updateWorkbooks,
     onCreate,
     getWorkbook,
-    saveWorkbooks,
   };
 };

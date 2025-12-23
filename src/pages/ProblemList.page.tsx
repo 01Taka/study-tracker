@@ -14,8 +14,9 @@ export function ProblemListPage() {
   const { workbookId } = useParams();
 
   // reloadWorkbook を取得
-  const { problemLists, currentWorkbook, workbookName, onCreate, reloadWorkbook } =
-    useProblemListData(workbookId ?? '');
+  const { problemLists, currentWorkbook, workbookName, onCreate } = useProblemListData(
+    workbookId ?? ''
+  );
 
   const [openedCreateModal, setOpenedCreateModal] = useState(false);
 
@@ -44,7 +45,6 @@ export function ProblemListPage() {
         opened={!!openedProblemList}
         onClose={() => setOpenedProblemListIndex(null)}
         problemList={openedProblemList}
-        reloadWorkbook={reloadWorkbook}
       />
 
       {!openedProblemList && (

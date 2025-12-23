@@ -1,5 +1,6 @@
 import { useCallback, useRef } from 'react';
 import { useForm } from '@mantine/form';
+import { generateId } from '@/shared/functions/generate-id';
 import { UnitBulkAddFormUnit, UnitBulkAddFormValues } from '../types/types';
 
 export const useUnitBulkAddForm = () => {
@@ -38,7 +39,7 @@ export const useUnitBulkAddForm = () => {
       const answersToAdd = optionalAnswers ?? answerDraft;
 
       const newUnit: UnitBulkAddFormUnit = {
-        id: crypto.randomUUID(), // 一意なIDを生成
+        id: generateId(), // 一意なIDを生成
         question: questionDraft.trim() || undefined,
         answers: answersToAdd,
         ...unitSetting,
@@ -120,7 +121,7 @@ export const useUnitBulkAddForm = () => {
 
       const targets = units.slice(s, e + 1);
       const mergedUnit: UnitBulkAddFormUnit = {
-        id: crypto.randomUUID(),
+        id: generateId(),
         question: targets
           .map((u) => u.question)
           .filter(Boolean)

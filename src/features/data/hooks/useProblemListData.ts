@@ -5,7 +5,7 @@ import { ProblemList, UserDefinedHierarchy } from '@/shared/types/app.types';
 import { useHierarchyArchive } from './useHierarchyArchive';
 
 export const useProblemListData = (workbookId: string) => {
-  const { workbooks, updateWorkbooks, reloadWorkbook } = useWorkbookData();
+  const { workbooks, updateWorkbooks } = useWorkbookData();
   const { addHierarchy } = useHierarchyArchive();
 
   /**
@@ -63,7 +63,6 @@ export const useProblemListData = (workbookId: string) => {
   return {
     currentWorkbook,
     problemLists,
-    reloadWorkbook,
     onCreate: onCreateProblemList,
     getProblemList,
     workbookName: currentWorkbook?.name || '',
